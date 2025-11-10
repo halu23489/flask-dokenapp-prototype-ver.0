@@ -1,68 +1,106 @@
-<!-- ...existing code... -->
-<!doctype html>
+<!DOCTYPE html>
 <html lang="ja">
 <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{{ page_title if page_title is defined else 'ショクチョー！|ホーム' }}</title>
-    <!-- ...existing head (CSS/JS) ... -->
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ page_title }} | {{ app_name }}</title>
+    <!-- Tailwind CSS CDNの読み込み -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Interフォントの設定と日本語フォントの指定 */
+        body {
+            font-family: 'Inter', 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Meiryo', sans-serif;
+            background-color: #f8fafc; /* Slate-50 */
+        }
+        .main-content {
+            min-height: calc(100vh - 64px); /* ヘッダー分を引く */
+        }
+        .sidebar-link.active {
+            background-color: #1e3a8a; /* Blue-800 */
+            color: white;
+            font-weight: 600;
+        }
+        .sidebar-link:hover {
+            background-color: #3b82f6; /* Blue-500 */
+            color: white;
+        }
+    </style>
 </head>
-<body>
-    <div class="d-flex">
-        {% set page_title = page_title if page_title is defined else 'ホーム' %}
-        {% set nav = nav if nav is defined else {} %}
-        {% set current_app = current_app if current_app is defined else '' %}
+<body class="text-gray-800">
 
+    <!-- ヘッダー -->
+    <header class="bg-blue-600 shadow-lg sticky top-0 z-10">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <a href="{{ url_for('index') }}" class="text-2xl font-extrabold text-white tracking-tight rounded-lg p-1 transition duration-200 hover:bg-blue-700">
+                {{ app_name }}
+            </a>
+            <div class="md:hidden">
+                <button id="menu-button" class="text-white hover:text-gray-200 focus:outline-none">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7"></path></svg>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <div class="flex max-w-7xl mx-auto">
         <!-- サイドバー (ナビゲーション) -->
-        <nav class="sidebar">
-            <!-- ...existing sidebar code... -->
-        </nav>
-        
-        <!-- メインコンテンツエリア（子テンプレートが挿入できるブロック） -->
-        {% block content %}
-        <main class="main-content flex-grow-1">
-            <h1>
-                <img src="/static/img/logo2.png"
-                    alt="ショクチョー！ロゴ"
-                    class="header-logo rounded me-3" style="max-height: 35px;">
+        <aside id="sidebar" class="fixed inset-y-0 left-0 transform -translate-x-full md:relative md:translate-x-0 transition-transform duration-300 ease-in-out bg-white w-64 p-4 shadow-xl z-20 md:z-auto md:shadow-none mt-16 md:mt-0">
+            <nav class="space-y-4">
+                {% for key, item in nav.items() %}
+                    {% if item.children %}
+                        <!-- グループタイトル -->
+                        <div class="text-xs font-semibold uppercase text-gray-500 mt-4">{{ item.name }}</div>
+                        <div class="space-y-1">
+                            {% for child in item.children %}
+                                <a href="{{ url_for(child.url) }}" 
+                                   class="sidebar-link block px-3 py-2 rounded-lg text-sm font-medium transition duration-150 ease-in-out 
+                                          {% if current_app == child.id %}active{% else %}text-gray-700 hover:text-white{% endif %}"
+                                >
+                                    {{ child.name }}
+                                </a>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <!-- 単一リンク -->
+                        <a href="{{ url_for(item.url) }}" 
+                           class="sidebar-link block px-3 py-2 rounded-lg text-sm font-medium transition duration-150 ease-in-out 
+                                  {% if current_app == key %}active{% else %}text-gray-700 hover:text-white{% endif %}"
+                        >
+                            {{ item.name }}
+                        </a>
+                    {% endif %}
+                {% endfor %}
+            </nav>
+        </aside>
+
+        <!-- メインコンテンツ -->
+        <main class="flex-1 p-4 sm:p-6 lg:p-8 main-content w-full">
+            <h1 class="text-3xl font-bold text-gray-900 mb-6 border-b-4 border-blue-500 pb-2">
                 {{ page_title }}
             </h1>
-
-            <!-- ヒーローセクション/メインメッセージ -->
-            <div class="p-4 mb-4 bg-white rounded-3 shadow-sm border border-secondary-subtle">
-                <div class="container-fluid py-3">
-                    <h2 class="display-6 fw-bold text-dark" style="color: var(--text-color) !important;">
-                        技術者のための、オールインワン・ツールキット
-                    </h2>
-                    <p class="col-md-10 fs-5 text-secondary">
-                        現場の効率を最大化する、カスタム開発されたアプリ群。必要なツールに素早くアクセスし、プロジェクトの管理、計算、ファイル変換などを直感的に行えます。
-                    </p>
-                    <a href="#app-grid" class="btn btn-primary btn-lg mt-2" type="button" style="background-color: var(--accent-color) !important; border-color: var(--accent-color) !important;">
-                        主要アプリを見る <i class="bi bi-arrow-down"></i>
-                    </a>
-                </div>
-            </div>
-
-            <h2 class="h4 mt-5 mb-3" id="app-grid" style="color: var(--text-color);">主要アプリとツール</h2>
-            
-            <!-- アプリグリッド (一部を表示) -->
-            <div class="row g-4 mb-5">
-                <!-- ...existing app tiles ... -->
-            </div>
-            <!-- /アプリグリッド -->
-
+            {% block content %}
+            <!-- 各ページの内容がここに入る -->
+            {% endblock %}
         </main>
-        {% endblock %}
     </div>
 
-    <!-- フッター (ページ最下部に目立たず配置) -->
-    <footer class="footer">
-        <p class="mb-0"></p>
-        <p class="mb-0 text-end text-muted">Mr.BigstoneによってIdealaboの一環で作成されました。</p>
-    </footer>
+    <script>
+        // モバイルナビゲーションのトグル
+        const menuButton = document.getElementById('menu-button');
+        const sidebar = document.getElementById('sidebar');
 
-    <!-- Bootstrap 5 JS Bundle -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+        menuButton.addEventListener('click', () => {
+            sidebar.classList.toggle('-translate-x-full');
+        });
+
+        // リンククリック時にモバイルメニューを閉じる
+        document.querySelectorAll('.sidebar-link').forEach(link => {
+            link.addEventListener('click', () => {
+                if (!sidebar.classList.contains('-translate-x-full')) {
+                    sidebar.classList.add('-translate-x-full');
+                }
+            });
+        });
+    </script>
 </body>
 </html>
-<!-- ...existing code... -->
