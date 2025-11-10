@@ -1,0 +1,23 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<p class="lead">このページは、将来的に実装される掲示板のページです。</p>
+
+<div class="card shadow mb-4">
+    <div class="card-header bg-secondary text-white">
+        <h5 class="mb-0">詰所（掲示板）</h5>
+    </div>
+    <div class="card-body">
+        <p>現在、機能は開発中です。準備が整い次第、ここに機能が追加されます。</p>
+    </div>
+</div>
+
+<hr class="my-5">
+
+<div class="text-center">
+    <a href="{{ url_for('index') }}" class="btn btn-primary btn-lg">
+        ホームに戻る
+    </a>
+</div>
+
+{% endblock %}
