@@ -1,0 +1,23 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<p class="lead">このページは、将来的に実装される計算ツール（土量計算、面積計算など）のページです。</p>
+
+<div class="card shadow mb-4">
+    <div class="card-header bg-secondary text-white">
+        <h5 class="mb-0">計算ツール（開発中）</h5>
+    </div>
+    <div class="card-body">
+        <p>現在、計算ツールの機能は開発中です。準備が整い次第、ここに機能が追加されます。</p>
+    </div>
+</div>
+
+<hr class="my-5">
+
+<div class="text-center">
+    <a href="{{ url_for('converter_page') }}" class="btn btn-primary btn-lg">
+        📸 HEIC to JPG 変換ページに戻る
+    </a>
+</div>
+
+{% endblock %}

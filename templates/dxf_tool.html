@@ -1,0 +1,65 @@
+{% extends "layout.html" %}
+
+{# タイトルを確実に親テンプレートに渡す #}
+{% set page_title = 'DXF座標出力ツール' %}
+
+{% block extra_head %}
+    {# DXFツールはBootstrapベースのため、Tailwindの読み込みは不要 #}
+    <style>
+        /* DXFツール固有のスタイルがあればここに追加 */
+    </style>
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-10">
+        <div class="card shadow-lg p-4 mb-4">
+            <h3 class="card-title text-primary mb-3">座標データ入力</h3>
+            <p class="text-muted">点番号、X座標、Y座標の組を、改行で区切って入力してください。（例: No1, 100.00, 200.00）</p>
+
+            <!-- DXF生成フォーム -->
+            <form id="dxfForm" action="{{ url_for('generate_dxf') }}" method="POST">
+                <div class="mb-3">
+                    <label for="coordinate_data" class="form-label">座標データ</label>
+                    <textarea id="coordinate_data" name="coordinate_data" class="form-control" rows="10" required placeholder="例:&#10;P1, 100.00, 200.00&#10;P2, 150.50, 210.25"></textarea>
+                </div>
+                
+                <div class="row g-3 mb-4">
+                    <div class="col-md-6">
+                        <label for="dxf_name" class="form-label">ファイル名</label>
+                        <input type="text" id="dxf_name" name="dxf_name" class="form-control" value="coordinate_output" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="app_layer" class="form-label">レイヤー名</label>
+                        <input type="text" id="app_layer" name="app_layer" class="form-control" value="POINTS" required>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-lg w-100">
+                    <i class="fas fa-file-export me-2"></i> DXFファイルを生成・ダウンロード
+                </button>
+            </form>
+        </div>
+
+        <div id="resultMessage" class="mt-4">
+            <!-- 処理結果メッセージがここに表示されます -->
+        </div>
+
+    </div>
+</div>
+
+<script>
+    document.getElementById('dxfForm').addEventListener('submit', function(e) {
+        const data = document.getElementById('coordinate_data').value;
+        const resultMsg = document.getElementById('resultMessage');
+
+        if (!data.trim()) {
+            // alert()の代わりにBootstrapのアラートメッセージを表示
+            resultMsg.innerHTML = '<div class="alert alert-danger" role="alert">座標データを入力してください。</div>';
+            e.preventDefault();
+        } else {
+            resultMsg.innerHTML = ''; // メッセージをクリア
+        }
+    });
+</script>
+{% endblock %}

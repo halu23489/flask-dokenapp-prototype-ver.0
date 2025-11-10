@@ -1,0 +1,76 @@
+/* ベースカラー設定（建設業テーマ） */
+:root {
+    --primary-color: #007bff; /* Bootstrapの標準青 */
+    --secondary-color: #6c757d; /* Bootstrapの標準グレー */
+    --accent-color: #ff9900; /* 強調用のオレンジ */
+    --text-color: #343a40; /* 濃いめのテキスト */
+    --bg-light: #f8f9fa; /* 薄い背景 */
+}
+
+/* サイドバーのカスタマイズ */
+.sidebar {
+    /* 既存のスタイルを上書き */
+    background-color: #212529 !important; /* ダークな背景でプロフェッショナルな印象に */
+    box-shadow: 2px 0 5px rgba(0,0,0,.3) !important;
+}
+
+/* サイドバーの見出し */
+.sidebar h5 {
+    color: white !important; /* テキストを白に */
+    border-bottom-color: var(--accent-color) !important; /* 区切り線をアクセントカラーに */
+    font-weight: 600;
+}
+
+/* サイドバーのリンク */
+.sidebar .nav-link {
+    color: #ced4da !important; /* リンクの色を薄いグレーに */
+    transition: background-color 0.3s, color 0.3s;
+}
+
+/* サイドバーのリンク（ホバー時） */
+.sidebar .nav-link:hover {
+    color: white !important;
+    background-color: #343a40; /* ホバーで少し暗く */
+}
+
+/* サイドバーの現在地（Active）リンク */
+.sidebar .nav-link.active {
+    color: var(--accent-color) !important; /* 現在地をオレンジで強調 */
+    background-color: #495057 !important; /* 背景を濃くして視認性アップ */
+    border-left: 3px solid var(--accent-color); /* 左側に縦線を追加 */
+    font-weight: 700;
+}
+
+/* メインコンテンツの見出し */
+.main-content h1 {
+    color: var(--text-color);
+    border-bottom: 2px solid #dee2e6; /* 薄い下線 */
+    padding-bottom: 0.5rem;
+    margin-bottom: 1.5rem;
+}
+
+/* カードの調整 */
+.card {
+    border: 1px solid #ced4da; /* わずかに目立つ境界線 */
+    border-radius: 0.5rem; /* 角を少し丸く */
+    transition: transform 0.3s, box-shadow 0.3s;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05); /* ほんの少し影を追加 */
+}
+
+.card:hover {
+    transform: translateY(-3px); /* マウスオーバーで少し浮き上がらせる */
+    box-shadow: 0 8px 12px rgba(0, 0, 0, 0.1); /* 影を濃く */
+}
+
+/* カード内のボタンの色を調整（Bootstrapクラスが優先されるため、ここでは主に装飾） */
+.card .btn-primary {
+    /* 計算ツール（標準青） */
+    background-color: var(--primary-color) !important;
+    border-color: var(--primary-color) !important;
+}
+
+.card .btn-success {
+    /* 掲示板（デフォルトの緑をオレンジに近付け、注意を引く） */
+    background-color: var(--accent-color) !important; 
+    border-color: var(--accent-color) !important;
+}

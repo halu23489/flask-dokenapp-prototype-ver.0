@@ -1,0 +1,23 @@
+{% extends "index.html" %}
+
+{% block content %}
+<div class="container">
+    <p class="lead">iPhoneなどで撮影したHEIC形式の画像を、EXIF（メタデータ）を維持したまま汎用的なJPG形式に変換します。</p>
+
+    <div class="card shadow mb-4">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0">HEICファイルアップロード</h5>
+        </div>
+        <div class="card-body">
+            <form method="POST" action="{{ url_for('convert_file') }}" enctype="multipart/form-data">
+                <div class="mb-3">
+                    <label for="heicFile" class="form-label">HEICファイルを選択:</label>
+                    <input class="form-control" type="file" id="heicFile" name="heic_file" accept=".heic, .heif" required>
+                    <div class="form-text">変換後、メタデータ（日時、位置情報など）が維持されたJPGファイルがダウンロードされます。</div>
+                </div>
+                <button type="submit" class="btn btn-success">変換してダウンロード</button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

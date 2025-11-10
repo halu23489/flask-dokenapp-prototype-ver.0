@@ -1,0 +1,24 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-10 col-lg-8">
+        <div class="card p-5 text-center shadow-lg border-0">
+            <h2 class="display-5 fw-bold text-primary mb-3">
+                {{ app_name }}へようこそ
+            </h2>
+            <p class="lead text-secondary mb-4">
+                建設・土木業界の業務効率化をサポートする多機能ツールキットです。
+            </p>
+            <p class="text-muted mx-auto" style="max-width: 600px;">
+                写真のフォーマット変換、単位の比重換算、CAD連携用のDXF座標出力、そして見積もり比較など、現場の「困った」を解決するためのツールがここに集約されています。サイドバーから目的の機能を選択してください。
+            </p>
+            <div class="mt-4">
+                <a href="{{ url_for('dxf_tool_page') }}" class="btn btn-success btn-lg px-5 shadow-sm">
+                    まずはDXFツールを試す！ 🚀
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,85 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<p class="lead">長さ、重さ、体積と重さ（比重）などの基本的な単位を素早く換算します。</p>
+
+<div class="card shadow mb-4">
+    <div class="card-header bg-success text-white">
+        <h5 class="mb-0">単位換算ツール</h5>
+    </div>
+    <div class="card-body">
+        <form method="POST" action="{{ url_for('unit_converter_page') }}">
+            <div class="row g-3 align-items-center mb-4">
+                
+                <div class="col-md-3">
+                    <label for="inputValue" class="form-label">換算したい値:</label>
+                    <input type="number" step="any" class="form-control" id="inputValue" name="value" required>
+                </div>
+                
+                <div class="col-md-3">
+                    <label for="unitFrom" class="form-label">元の単位:</label>
+                    <select class="form-select" id="unitFrom" name="unit_from" required>
+                        <optgroup label="長さ">
+                            <option value="m">m (メートル)</option>
+                            <option value="cm">cm (センチメートル)</option>
+                            <option value="mm">mm (ミリメートル)</option>
+                        </optgroup>
+                        <optgroup label="重さ">
+                            <option value="t">t (トン)</option>
+                            <option value="kg">kg (キログラム)</option>
+                            <option value="g">g (グラム)</option>
+                        </optgroup>
+                        <optgroup label="体積 (比重換算用)">
+                            <option value="m3">m³ (立方メートル)</option>
+                            </optgroup>
+                    </select>
+                </div>
+                
+                <div class="col-md-1 text-center">
+                    <label class="form-label text-muted">&rarr;</label>
+                </div>
+                
+                <div class="col-md-3">
+                    <label for="unitTo" class="form-label">換算後の単位:</label>
+                    <select class="form-select" id="unitTo" name="unit_to" required>
+                        <optgroup label="長さ">
+                            <option value="m">m (メートル)</option>
+                            <option value="cm">cm (センチメートル)</option>
+                            <option value="mm">mm (ミリメートル)</option>
+                        </optgroup>
+                        <optgroup label="重さ">
+                            <option value="t">t (トン)</option>
+                            <option value="kg">kg (キログラム)</option>
+                            <option value="g">g (グラム)</option>
+                        </optgroup>
+                        <optgroup label="体積 (比重換算用)">
+                            <option value="m3">m³ (立方メートル)</option>
+                            </optgroup>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="mb-4">
+                <label for="densityType" class="form-label">比重の種類 (m³ ⇔ t 換算時のみ選択):</label>
+                <select class="form-select" id="densityType" name="density_type">
+                    <option value="" selected>--- 選択不要 ---</option>
+                    {% for option in density_options %}
+                        <option value="{{ option }}">{{ option }}</option>
+                    {% endfor %}
+                </select>
+                <div class="form-text">例：m³をtに換算する場合に、物質の種類を選択してください。</div>
+            </div>
+            
+            <button type="submit" class="btn btn-success">換算</button>
+        </form>
+
+        {% if result %}
+        <hr class="my-4">
+        <div class="alert alert-info" role="alert">
+            <h4>換算結果</h4>
+            <p>{{ result }}</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
