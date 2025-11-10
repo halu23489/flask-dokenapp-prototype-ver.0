@@ -1,0 +1,314 @@
+<!doctype html>
+<html lang="ja">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>ショクチョー！|ホーム</title> 
+
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font: Inter (for clean, modern look) -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap" rel="stylesheet"> 
+    <!-- Bootstrap Icons (Optional, but useful for modern design) -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+
+    <style>
+        /* ========================================= */
+        /* == カスタムCSS（レイアウトとテーマ） == */
+        /* ========================================= */
+        
+        :root {
+            --primary-color: #007bff; /* 青系 */
+            --secondary-color: #6c757d; /* グレー */
+            --accent-color: #ff9900; /* オレンジ系 */
+            --text-color: #2c3e50; /* 濃いブルーグレー */
+            --bg-light: #ececec; /* メインコンテンツの背景 */
+            --sidebar-width: 280px; 
+            --dark-bg: #212529; /* サイドバー背景 */
+        }
+        
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background-color: var(--bg-light); /* 全体の背景 */
+        }
+
+        /* サイドバーのスタイル (ベースを維持) */
+        .sidebar {
+            width: var(--sidebar-width);
+            position: fixed;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            z-index: 1000;
+            padding: 1rem;
+            background-color: var(--dark-bg) !important;
+            box-shadow: 2px 0 5px rgba(0,0,0,.3) !important;
+            overflow-y: auto;
+        }
+
+        .sidebar .nav-link { 
+            color: #ced4da !important; 
+            transition: background-color 0.3s, color 0.3s; 
+            padding: 0.5rem 1rem; 
+        }
+        .sidebar .nav-link:hover { 
+            color: white !important; 
+            background-color: #343a40; 
+        }
+        .sidebar .nav-link.active { 
+            color: var(--accent-color) !important; 
+            background-color: #495057 !important; 
+            border-left: 3px solid var(--accent-color); 
+            font-weight: 700; 
+        }
+
+        /* メインコンテンツの調整 */
+        .main-content {
+            padding-left: calc(var(--sidebar-width) + 1.5rem);
+            padding-right: 1.5rem;
+            padding-top: 1.5rem;
+            min-height: 100vh;
+            background-color: #f7f7f7; /* メインエリアの背景を明るく */
+        }
+        
+        .main-content h1 {
+            color: var(--text-color);
+            border-bottom: 2px solid #e0e0e0;
+            padding-bottom: 0.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        /* ========================================= */
+        /* == アプリグリッドとカードのカスタムスタイル == */
+        /* ========================================= */
+        
+        /* アプリタイルのベーススタイル（角の取れた正方形） */
+        .app-tile {
+            /* 1:1の縦横比を強制 */
+            aspect-ratio: 1 / 1; 
+            border-radius: 1.5rem; /* 大きく角を取る */
+            background-color: white;
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.08); /* 深みのある影 */
+            transition: transform 0.3s, box-shadow 0.3s;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding: 1.5rem;
+            text-decoration: none; /* リンクとして使用するため */
+            color: var(--text-color);
+        }
+        
+        .app-tile:hover {
+            transform: translateY(-5px); /* 浮き上がるアニメーション */
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.15);
+            color: var(--primary-color);
+        }
+
+        /* アイコンのコンテナ */
+        .app-icon-box {
+            font-size: 2.5rem; /* アイコンサイズ */
+            margin-bottom: 0.5rem;
+            color: var(--primary-color); /* アクセントカラー */
+        }
+
+        /* タイルのタイトル */
+        .app-tile-title {
+            font-weight: 700;
+            font-size: 1.1rem;
+            margin-bottom: 0.25rem;
+        }
+        
+        .app-tile-desc {
+            font-size: 0.85rem;
+            color: var(--secondary-color);
+            line-height: 1.3;
+        }
+
+        /* レスポンシブ調整 */
+        @media (max-width: 768px) {
+            .sidebar { position: static; width: 100%; height: auto; box-shadow: none !important; border-bottom: 1px solid rgba(0,0,0,.1); }
+            .main-content { padding-left: 1.5rem; padding-right: 1.5rem; padding-top: 0.5rem; }
+            .main-content h1 { display: block; }
+        }
+    </style>
+</head>
+<body>
+    <div class="d-flex"> 
+        <!-- サイドバー (ナビゲーション - 元の構造を維持) -->
+        {% set page_title = 'ホーム' %}
+        {% set utility_titles = [
+            'HEIC to JPG 変換',
+            '単位換算',
+            '計算ツール',
+            'DXF座標出力ツール',
+            '比較見積もりツール'
+        ] %}
+        {% set is_utility_page = page_title is defined and page_title in utility_titles %}
+
+        <nav class="sidebar">
+            <div class="sidebar-header">
+                <!-- ロゴは今回はプレースホルダーを使用 -->
+                <img src="https://placehold.co/50x50/2c3e50/ffffff?text=L" 
+                    alt="ショクチョー！ロゴ" 
+                    class="header-logo rounded me-3" style="vertical-align: middle;">
+                <h5 style="color:white; margin-top: 10px; margin-bottom: 10px; border-bottom: 1px solid #495057;">ショクチョー！</h5>
+                <h5 style="color:white; margin-bottom: 0;">メニュー</h5>
+            </div>
+        
+            <ul class="nav flex-column">
+                <li class="nav-item">
+                    <a class="nav-link {% if page_title == 'ホーム' %}active{% endif %}" href="{{ url_for('index') }}">🏠 ホーム</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if is_utility_page %}active{% endif %}" data-bs-toggle="collapse"
+                    href="#utilitiesSubmenu" role="button"
+                    aria-expanded="{{ 'true' if is_utility_page else 'false' }}"
+                    aria-controls="utilitiesSubmenu">
+                        🛠️ 便利アプリ
+                    </a>
+
+                    <div class="collapse {% if is_utility_page %}show{% endif %}" id="utilitiesSubmenu">
+                        <ul class="nav flex-column ms-3">
+                            <li class="nav-item">
+                                <a class="nav-link {% if page_title == 'HEIC to JPG 変換' %}active{% endif %}" href="{{ url_for('converter_page') }}">
+                                    📸 HEIC to JPG 変換
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link {% if page_title == '単位換算' %}active{% endif %}" href="{{ url_for('unit_converter_page') }}">
+                                    📏 単位換算
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link {% if page_title == '計算ツール' %}active{% endif %}" href="{{ url_for('calculator') }}">
+                                    📐 計算ツール
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link {% if page_title == 'DXF座標出力ツール' %}active{% endif %}" href="{{ url_for('dxf_tool_page') }}">
+                                    🗺️ DXF座標出力ツール
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link {% if page_title == '比較見積もりツール' %}active{% endif %}" href="{{ url_for('comparison_tool_page') }}">
+                                    📊 比較見積もりツール
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                </li>
+                
+                <li class="nav-item">
+                    <a class="nav-link {% if page_title == '知恵袋・掲示板' %}active{% endif %}" href="{{ url_for('forum') }}">💬 知恵袋・掲示板</a>
+                </li>
+            </ul>
+        </nav>
+        
+        <!-- メインコンテンツエリア -->
+        <main class="main-content flex-grow-1">
+            <h1>
+                <!-- ロゴは今回はプレースホルダーを使用 -->
+                <img src="https://placehold.co/50x50/2c3e50/ffffff?text=L" 
+                    alt="ショクチョー！ロゴ" 
+                    class="header-logo rounded me-3" style="max-height: 35px;">
+                ダッシュボード
+            </h1>
+
+            <!-- ヒーローセクション/メインメッセージ -->
+            <div class="p-4 mb-4 bg-white rounded-3 shadow-sm border border-secondary-subtle">
+                <div class="container-fluid py-3">
+                    <h2 class="display-6 fw-bold text-dark" style="color: var(--text-color) !important;">
+                        技術者のための、オールインワン・ツールキット
+                    </h2>
+                    <p class="col-md-10 fs-5 text-secondary">
+                        現場の効率を最大化する、カスタム開発されたアプリ群。必要なツールに素早くアクセスし、プロジェクトの管理、計算、ファイル変換などを直感的に行えます。
+                    </p>
+                    <a href="#" class="btn btn-primary btn-lg mt-2" type="button" style="background-color: var(--accent-color) !important; border-color: var(--accent-color) !important;">
+                        全てのアプリを見る <i class="bi bi-arrow-right"></i>
+                    </a>
+                </div>
+            </div>
+
+            <h2 class="h4 mt-5 mb-3" style="color: var(--text-color);">主要アプリとツール</h2>
+            
+            <!-- アプリグリッド (2行 x 3列) - リンクを修正し、アプリを復元 -->
+            <div class="row g-4 mb-5">
+                
+                <!-- アプリ 1: HEIC to JPG 変換 (リンク修正) -->
+                <div class="col-12 col-md-6 col-lg-4">
+                    <a href="{{ url_for('converter_page') }}" class="app-tile">
+                        <div class="app-icon-box" style="color: #6c757d;">
+                            <i class="bi bi-file-image"></i>
+                        </div>
+                        <div class="app-tile-title">HEIC to JPG 変換</div>
+                        <p class="app-tile-desc">iOSの画像ファイルを一括で汎用形式に変換し、共有を容易にします。</p>
+                    </a>
+                </div>
+
+                <!-- アプリ 2: 単位換算ツール (リンク修正) -->
+                <div class="col-12 col-md-6 col-lg-4">
+                    <a href="{{ url_for('unit_converter_page') }}" class="app-tile">
+                        <div class="app-icon-box" style="color: #0d6efd;">
+                            <i class="bi bi-rulers"></i>
+                        </div>
+                        <div class="app-tile-title">単位換算</div>
+                        <p class="app-tile-desc">建築・土木で必要な複雑な長さ、面積、体積を即座に変換します。</p>
+                    </a>
+                </div>
+                
+                <!-- アプリ 3: 計算ツール (復元 & リンク修正) -->
+                <div class="col-12 col-md-6 col-lg-4">
+                    <a href="{{ url_for('calculator') }}" class="app-tile">
+                        <div class="app-icon-box" style="color: #ff9900;">
+                            <i class="bi bi-calculator"></i>
+                        </div>
+                        <div class="app-tile-title">計算ツール</div>
+                        <p class="app-tile-desc">一般的な計算から専門的な計算まで、現場で役立つ機能を提供します。</p>
+                    </a>
+                </div>
+                
+                <!-- アプリ 4: DXF座標出力ツール (リンク修正) -->
+                <div class="col-12 col-md-6 col-lg-4">
+                    <a href="{{ url_for('dxf_tool_page') }}" class="app-tile">
+                        <div class="app-icon-box" style="color: #198754;">
+                            <i class="bi bi-geo-alt"></i>
+                        </div>
+                        <div class="app-tile-title">DXF座標出力ツール</div>
+                        <p class="app-tile-desc">図面データから指定した点の座標を抽出し、整理されたCSVを出力。</p>
+                    </a>
+                </div>
+
+                <!-- アプリ 5: 比較見積もりツール (リンク修正) -->
+                <div class="col-12 col-md-6 col-lg-4">
+                    <a href="{{ url_for('comparison_tool_page') }}" class="app-tile">
+                        <div class="app-icon-box" style="color: #fd7e14;">
+                            <i class="bi bi-graph-up"></i>
+                        </div>
+                        <div class="app-tile-title">比較見積もりツール</div>
+                        <p class="app-tile-desc">複数業者からの見積もりを比較し、最適な選択をサポートします。</p>
+                    </a>
+                </div>
+
+                <!-- アプリ 6: 工程管理ボード (新アプリの例 - リンクはダミー) -->
+                <div class="col-12 col-md-6 col-lg-4">
+                    <a href="#" class="app-tile">
+                        <div class="app-icon-box" style="color: #2c3e50;">
+                            <i class="bi bi-calendar-check"></i>
+                        </div>
+                        <div class="app-tile-title">工程管理ボード</div>
+                        <p class="app-tile-desc">タスクの進捗を視覚的に管理。チームでの情報共有をリアルタイムに。</p>
+                    </a>
+                </div>
+
+            </div>
+            <!-- /アプリグリッド -->
+
+        </main>
+    </div>
+
+    <!-- Bootstrap 5 JS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
