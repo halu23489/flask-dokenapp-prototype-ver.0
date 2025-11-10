@@ -1,24 +1,41 @@
 {% extends "layout.html" %}
 
 {% block content %}
-<div class="row justify-content-center">
-    <div class="col-md-10 col-lg-8">
-        <div class="card p-5 text-center shadow-lg border-0">
-            <h2 class="display-5 fw-bold text-primary mb-3">
-                {{ app_name }}へようこそ
-            </h2>
-            <p class="lead text-secondary mb-4">
-                建設・土木業界の業務効率化をサポートする多機能ツールキットです。
-            </p>
-            <p class="text-muted mx-auto" style="max-width: 600px;">
-                写真のフォーマット変換、単位の比重換算、CAD連携用のDXF座標出力、そして見積もり比較など、現場の「困った」を解決するためのツールがここに集約されています。サイドバーから目的の機能を選択してください。
-            </p>
-            <div class="mt-4">
-                <a href="{{ url_for('dxf_tool_page') }}" class="btn btn-success btn-lg px-5 shadow-sm">
-                    まずはDXFツールを試す！ 🚀
-                </a>
-            </div>
-        </div>
-    </div>
+<div class="app-grid">
+    <a class="app-tile" href="{{ url_for('converter_page') }}">
+        <div class="app-icon" style="background:linear-gradient(135deg,#afbd33,#97b863)"><i class="bi bi-camera-reels-fill"></i></div>
+        <div class="app-title">HEIC→JPG</div>
+        <p class="app-desc">写真を一括変換（EXIF維持）</p>
+    </a>
+
+    <a class="app-tile" href="{{ url_for('unit_converter_page') }}">
+        <div class="app-icon" style="background:linear-gradient(135deg,#06b6d4,#10b981)"><i class="bi bi-rulers"></i></div>
+        <div class="app-title">単位換算</div>
+        <p class="app-desc">長さ・重さ・体積を即換算</p>
+    </a>
+
+    <a class="app-tile" href="{{ url_for('calculator') }}">
+        <div class="app-icon" style="background:linear-gradient(135deg,#f97316,#ef4444)"><i class="bi bi-calculator-fill"></i></div>
+        <div class="app-title">計算ツール</div>
+        <p class="app-desc">土量・面積などの計算</p>
+    </a>
+
+    <a class="app-tile" href="{{ url_for('dxf_tool_page') }}">
+        <div class="app-icon" style="background:linear-gradient(135deg,#7c3aed,#06b6d4)"><i class="bi bi-vector-pen"></i></div>
+        <div class="app-title">DXF出力</div>
+        <p class="app-desc">座標データをDXFで保存</p>
+    </a>
+
+    <a class="app-tile" href="{{ url_for('comparison_tool_page') }}">
+        <div class="app-icon" style="background:linear-gradient(135deg,#2563eb,#14b8a6)"><i class="bi bi-bar-chart-fill"></i></div>
+        <div class="app-title">比較見積り</div>
+        <p class="app-desc">複数見積の比較</p>
+    </a>
+
+    <a class="app-tile" href="{{ url_for('forum') }}">
+        <div class="app-icon" style="background:linear-gradient(135deg,#06b6d4,#3b82f6)"><i class="bi bi-chat-dots-fill"></i></div>
+        <div class="app-title">詰所（掲示板）</div>
+        <p class="app-desc">質問・共有</p>
+    </a>
 </div>
 {% endblock %}

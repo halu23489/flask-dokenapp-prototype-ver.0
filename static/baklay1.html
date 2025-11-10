@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="ja">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    
+    <!-- タイトル表示ロジック -->
+    {% set app_lookup = nav[current_app] if current_app in nav and 'name' in nav[current_app] 
+        else (nav['utilities']['children'] | selectattr('id', 'equalto', current_app) | first) if current_app and 'utilities' in nav and nav['utilities']['children'] | selectattr('id', 'equalto', current_app) | first is not none
+        else {'name': 'ホーム'} %}
+    {% set app_name = app_lookup.name %}
+    <title id="page-title">ショクチョー！| {{ app_name }}</title> 
+    
+    {% block extra_head %}{% endblock %}
+
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">    
+    <style>
+        /* ========================================= */
+        /* == カスタムCSS（レイアウトとテーマ） == */
+        /* ========================================= */
+        
+        :root {
+            --primary-color: #007bff; 
+            --secondary-color: #6c757d; 
+            --accent-color: #ff9900; 
+            --text-color: #343a40; 
+            --bg-light: #f8f9fa; 
+            --sidebar-width: 280px; 
+        }
+        
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background-color: #f7f7f7; 
+            min-height: 100vh;
+        }
+
+        .sidebar {
+            width: var(--sidebar-width);
+            position: fixed;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            z-index: 1000;
+            padding: 1rem;
+            background-color: #212529 !important; /* ダークな背景 */
+            box-shadow: 2px 0 5px rgba(0,0,0,.3) !important;
+            overflow-y: auto;
+            transition: all 0.3s;
+        }
+
+        .sidebar-header {
+            padding-top: 1rem;
+            padding-bottom: 1rem;
+            margin-bottom: 1rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            text-align: center;
+        }
+        .sidebar-logo {
+            max-width: 80%;
+            height: auto;
+            border-radius: 0.5rem;
+            margin: 0 auto;
+            /* ロゴが見つからない場合のフォールバック */
+            background-color: #ff9900; 
+            padding: 5px;
+        }
+
+        .main-content {
+            margin-left: var(--sidebar-width);
+            padding: 20px;
+            transition: all 0.3s;
+        }
+        
+        /* アクティブなナビゲーションアイテムのスタイル */
+        .sidebar .nav-link.active {
+            background-color: var(--primary-color) !important; 
+            color: white !important;
+            border-radius: 0.5rem;
+            font-weight: 700;
+        }
+        .sidebar .nav-link {
+            border-radius: 0.5rem;
+            padding: 0.75rem 1rem;
+            transition: background-color 0.2s;
+        }
+        .sidebar .nav-link:hover {
+            background-color: #343a40;
+        }
+
+        .card {
+            border-radius: 1rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            border: none;
+            transition: all 0.3s;
+        }
+        .card:hover {
+             transform: translateY(-3px);
+             box-shadow: 0 8px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        /* モバイル対応 */
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 100%;
+                height: auto;
+                position: relative;
+                box-shadow: 0 2px 5px rgba(0,0,0,.3) !important;
+            }
+            .main-content {
+                margin-left: 0;
+                padding-top: 10px;
+            }
+            .sidebar-nav {
+                /* モバイルではデフォルトで非表示 */
+                display: none; 
+                padding: 0.5rem;
+            }
+            /* ハンバーガーメニューボタンの表示 */
+            .navbar-toggler {
+                display: block !important;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="d-flex" id="wrapper">
+        <!-- サイドバー -->
+        <nav class="sidebar bg-dark p-3">
+            <div class="sidebar-header text-center">
+                <a href="{{ url_for('index') }}" class="text-white text-decoration-none h4 fw-bold d-block">
+                    <!-- ロゴ画像参照: idea.jpg -->
+                    <img src="idea.jpg" alt="{{ app_name }} ロゴ" class="sidebar-logo" onerror="this.onerror=null; this.src='https://placehold.co/150x50/ff9900/ffffff?text=SHOKUCHO';" title="{{ app_name }}">
+                    <span class="d-block mt-2">{{ app_name }}</span>
+                </a>
+            </div>
+            
+            <button class="btn btn-outline-light d-md-none mb-3" id="menu-toggle">
+                メニュー
+            </button>
+            
+            <!-- サイドバーナビゲーション -->
+            <div id="sidebar-nav" class="sidebar-nav d-md-block">
+                <ul class="nav flex-column mb-auto">
+                    
+                    <!-- ナビゲーションアイテムの動的生成ロジック -->
+                    {% for id, item in nav.items() %}
+                        <!-- ユーティリティグループの処理 -->
+                        {% if item.children %}
+                            <li class="nav-item my-2">
+                                <span class="text-muted fw-bold d-block mb-1 px-3">{{ item.name }}</span>
+                                <ul class="nav flex-column ps-3">
+                                    {% for child in item.children %}
+                                        <li class="nav-item">
+                                            <!-- child.urlで正しい関数名(ルーティング)を参照 -->
+                                            <a class="nav-link text-white {% if current_app == child.id %}active{% endif %}" 
+                                               href="{{ url_for(child.url) }}">
+                                                {{ child.name }}
+                                            </a>
+                                        </li>
+                                    {% endfor %}
+                                </ul>
+                            </li>
+                        
+                        <!-- シングルリンクの処理 (ホーム、知恵袋) -->
+                        {% else %}
+                            <li class="nav-item my-2">
+                                <a class="nav-link text-white {% if current_app == id %}active{% endif %}" 
+                                   href="{{ url_for(item.url) }}">
+                                    {{ item.name }}
+                                </a>
+                            </li>
+                        {% endif %}
+                    {% endfor %}
+                </ul>
+            </div>
+        </nav>
+        <!-- /サイドバー -->
+
+        <!-- メインコンテンツラッパー -->
+        <div class="main-content flex-grow-1">
+            <!-- ページヘッダー -->
+            <header class="mb-4">
+                <h1 class="text-dark fw-bold">
+                    <!-- 現在のアプリ名をタイトルとして表示 -->
+                    {% if current_app == 'index' %}
+                        {{ app_name }} ダッシュボード
+                    {% else %}
+                        {{ app_name }}
+                    {% endif %}
+                </h1>
+                <p class="text-secondary">ショクチョーさんのための業務効率化ツールです。</p>
+            </header>
+
+            <!-- アプリケーション固有のコンテンツ -->
+            <main>
+                {% block content %}{% endblock %}
+            </main>
+        </div>
+        <!-- /メインコンテンツラッパー -->
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // サイドバーの表示/非表示切り替え (モバイル用)
+        document.addEventListener('DOMContentLoaded', () => {
+            const sidebarNav = document.getElementById('sidebar-nav');
+            const menuToggle = document.getElementById('menu-toggle');
+
+            if (menuToggle) {
+                menuToggle.addEventListener('click', () => {
+                    // d-block クラスのトグル
+                    sidebarNav.classList.toggle('d-block');
+                });
+            }
+        });
+    </script>
+</body>
+</html>
