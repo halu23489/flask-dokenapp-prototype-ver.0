@@ -39,7 +39,7 @@ def base_context(current_app='', page_title=''):
     }
 
 # ルート定義（テンプレートは layout.html を継承している前提）
-@app.route('/')
+@app.route('ｃ')
 def index():
     ctx = base_context(current_app='index', page_title='ホーム')
     return render_template('index.html', **ctx)
