@@ -23,32 +23,133 @@
         }
         body { font-family: 'Inter', sans-serif; background-color: #f7f7f7; }
 
+        /* サイドバー（デスクトップ） */
         .sidebar {
             width: var(--sidebar-width);
-            position: fixed; top: 0; bottom: 0; left: 0;
-            padding: 1rem; background-color: var(--dark-bg) !important;
-            box-shadow: 2px 0 5px rgba(0,0,0,.3);
-            overflow-y: auto; z-index: 1000;
+            position: fixed;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            padding: 1rem;
+            background-color: var(--dark-bg) !important;
+            box-shadow: 2px 0 5px rgba(0,0,0,.3) !important;
+            overflow-y: auto;
+            z-index: 1000;
         }
-        .sidebar-header { padding: .5rem 0 1rem 0; text-align: center; }
-        .sidebar .nav-link { color: #ced4da !important; padding: .5rem 1rem; transition: .2s; }
-        .sidebar .nav-link:hover { color: #fff !important; background-color: #343a40; }
+        .sidebar-header { padding-top: 1rem; padding-bottom: 1rem; margin-bottom: 1rem; text-align:center; }
+        .sidebar .nav-link { color: #ced4da !important; transition: background-color 0.3s, color 0.3s; padding: 0.5rem 1rem; }
+        .sidebar .nav-link:hover { color: white !important; background-color: #343a40; }
         .sidebar .nav-link.active { color: var(--accent-color) !important; background-color: #495057 !important; border-left: 3px solid var(--accent-color); font-weight: 700; }
+        .sidebar .collapse .nav-link { padding-left: 1.5rem; }
 
+        /* メインコンテンツ */
         .main-content {
             padding-left: calc(var(--sidebar-width) + 1.5rem);
-            padding-right: 1.5rem; padding-top: 1.5rem; padding-bottom: 4rem;
+            padding-right: 1.5rem;
+            padding-top: 1.5rem;
+            padding-bottom: 4rem;
             min-height: 100vh;
+            background-color: #f7f7f7;
         }
-        .main-content h1 { color: var(--text-color); border-bottom: 2px solid #e0e0e0; padding-bottom: .5rem; margin-bottom: 1rem; display:flex; align-items:center; }
-        .header-logo { max-height: 50px; margin-right: 12px; }
+        .main-content h1 { color: var(--text-color); border-bottom: 2px solid #e0e0e0; padding-bottom: 0.5rem; margin-bottom: 1.5rem; display: flex; align-items: center; }
+        .header-logo { max-height: 50px; width: auto; margin-right: 15px; }
 
-        .footer { position: fixed; bottom: 0; left: var(--sidebar-width); right: 0; background:#e9ecef; padding:.75rem 1.5rem; font-size:.8rem; border-top:1px solid #dee2e6; display:flex; justify-content:space-between; z-index:1000; }
+        /* ホーム：固定グリッド（2行 x 3列） */
+        .app-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+            margin-top: .5rem;
+        }
+        @media (max-width: 992px) {
+            .app-grid { grid-template-columns: repeat(2, 1fr); } /* タブレット～ */
+        }
+        @media (max-width: 576px) {
+            .app-grid { grid-template-columns: 1fr; } /* スマホ */
+        }
 
-        @media (max-width:768px) {
-            .sidebar { position: static; width:100%; box-shadow:none; border-bottom:1px solid rgba(0,0,0,.06); }
-            .main-content { padding-left:1.5rem; padding-top:.75rem; padding-bottom:6rem; }
-            .footer { left:0; flex-direction:column; align-items:flex-start; }
+        .app-tile {
+            border-radius: 12px;
+            background: linear-gradient(180deg,#ffffff,#f1f5f9);
+            padding: 1.2rem;
+            text-align: center;
+            box-shadow: 0 6px 18px rgba(2,6,23,0.06);
+            transition: transform .18s ease, box-shadow .18s ease;
+            text-decoration: none;
+            color: inherit;
+            display:flex; flex-direction:column; align-items:center; justify-content:center;
+            min-height: 160px;
+        }
+        .app-tile:hover { transform: translateY(-6px); box-shadow: 0 12px 30px rgba(2,6,23,0.09); }
+        .app-icon { font-size: 2.4rem; margin-bottom: 0.6rem; width:72px; height:72px; display:flex; align-items:center; justify-content:center; border-radius:14px; color:white; box-shadow: 0 6px 14px rgba(15,23,42,0.06); }
+
+        /* 金属感のあるグラデーション色 */
+        .metal-steel { background: linear-gradient(135deg,#4b5563 0%, #9aa6b2 100%); }
+        .metal-bronze { background: linear-gradient(135deg,#6b4a2e 0%, #b08d57 100%); }
+        .metal-copper { background: linear-gradient(135deg,#7b3f27 0%, #c9744b 100%); }
+        .metal-silver { background: linear-gradient(135deg,#bfc7cc 0%, #e6eef3 100%); color:#0f172a; }
+        .metal-gunmetal { background: linear-gradient(135deg,#2b3338 0%, #50606a 100%); }
+        .metal-gold { background: linear-gradient(135deg,#b8860b 0%, #ffd54f 100%); color:#0f172a; }
+
+        .app-tile-title { font-weight:700; margin-bottom: .25rem; }
+        .app-tile-desc { color: var(--secondary-color); font-size: .9rem; }
+
+        .footer {
+            position: fixed;
+            bottom: 0;
+            left: var(--sidebar-width);
+            right: 0;
+            background-color: #e9ecef;
+            color: #6c757d;
+            padding: 0.75rem 1.5rem;
+            font-size: 0.8rem;
+            border-top: 1px solid #dee2e6;
+            z-index: 1000;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        /* ホームボタン（全ページ共通） */
+        .home-cta {
+            position: fixed;
+            left: 50%;
+            transform: translateX(-50%);
+            bottom: 18px;
+            z-index: 1200;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255,255,255,0.5);
+            backdrop-filter: blur(6px);
+            border-radius: 14px;
+            padding: 6px 12px;
+            box-shadow: 0 8px 24px rgba(2,6,23,0.08);
+            transition: transform .12s ease, box-shadow .12s ease;
+            text-decoration: none;
+        }
+        .home-cta:active { transform: translateX(-50%) translateY(1px); }
+        .home-cta:hover { transform: translateX(-50%) translateY(-3px); box-shadow: 0 12px 32px rgba(2,6,23,0.12); }
+
+        .home-cta .home-circle {
+            width: 56px;
+            height: 56px;
+            border-radius: 12rem;
+            background: linear-gradient(135deg,#e6eef3,#c7d2da);
+            display:flex; align-items:center; justify-content:center;
+            box-shadow: inset 0 -6px 12px rgba(0,0,0,0.06);
+            margin-left:6px;
+            color: #0f172a;
+            font-size: 1.4rem;
+        }
+
+        @media (max-width: 768px) {
+            .sidebar { position: static; width: 100%; height: auto; box-shadow: none !important; border-bottom: 1px solid rgba(0,0,0,.1); }
+            .main-content { padding-left: 1.5rem; padding-right: 1.5rem; padding-top: 0.5rem; padding-bottom: 6rem; }
+            .header-logo { margin-bottom: 10px; }
+            .footer { left: 0; flex-direction: column; align-items: flex-start; font-size: 0.75rem; padding: 0.5rem 1.5rem; }
+            .home-cta { bottom: 12px; padding: 5px 10px; }
+            .home-cta .home-circle { width:48px; height:48px; }
         }
     </style>
     {% block extra_head %}{% endblock %}
@@ -62,23 +163,34 @@
         <nav class="sidebar">
             <div class="sidebar-header">
                 <img src="/static/img/logo2.png" alt="ロゴ" class="header-logo mb-2">
-                <div style="color:#fff; font-weight:700;">{{ app_name if app_name is defined else 'ショクチョー！' }}</div>
+                <h5 style="color:white; margin-top:0; margin-bottom:0;">{{ app_name if app_name is defined else 'ショクチョー！' }}</h5>
+                <small style="color:#ced4da;">メニュー</small>
             </div>
 
             <ul class="nav flex-column">
                 {% for key, item in nav.items() %}
-                    {% if item.get('children') %}
+                    {% set children = item.get('children', []) %}
+                    {% if children %}
+                        {% set is_open = false %}
+                        {% for c in children %}
+                            {% if c['id'] == current_app %}
+                                {% set is_open = true %}
+                            {% endif %}
+                        {% endfor %}
                         <li class="nav-item">
-                            {# 親は開閉表示のみ。子で active 判定 #}
-                            <a class="nav-link {% for c in item.children %}{% if c.id == current_app %}active{% break %}{% endif %}{% endfor %}" data-bs-toggle="collapse" href="#{{ key }}Submenu" aria-expanded="false">
-                                {{ item.name }}
+                            <a class="nav-link {% if is_open %}active{% endif %}" data-bs-toggle="collapse"
+                               href="#{{ key }}Submenu" role="button"
+                               aria-expanded="{{ 'true' if is_open else 'false' }}"
+                               aria-controls="{{ key }}Submenu">
+                                {{ item['name'] }}
                             </a>
-                            <div class="collapse {% for c in item.children %}{% if c.id == current_app %}show{% break %}{% endif %}{% endfor %}" id="{{ key }}Submenu">
+
+                            <div class="collapse {% if is_open %}show{% endif %}" id="{{ key }}Submenu">
                                 <ul class="nav flex-column ms-3">
-                                    {% for child in item.children %}
+                                    {% for child in children %}
                                         <li class="nav-item">
-                                            <a class="nav-link {% if current_app == child.id %}active{% endif %}" href="{{ url_for(child.url) }}">
-                                                {{ child.name }}
+                                            <a class="nav-link {% if current_app == child['id'] %}active{% endif %}" href="{{ url_for(child['url']) }}">
+                                                {{ child['name'] }}
                                             </a>
                                         </li>
                                     {% endfor %}
@@ -87,7 +199,7 @@
                         </li>
                     {% else %}
                         <li class="nav-item">
-                            <a class="nav-link {% if current_app == key %}active{% endif %}" href="{{ url_for(item.url) }}">{{ item.name }}</a>
+                            <a class="nav-link {% if current_app == key %}active{% endif %}" href="{{ url_for(item['url']) }}">{{ item['name'] }}</a>
                         </li>
                     {% endif %}
                 {% endfor %}
@@ -103,6 +215,12 @@
             {% block content %}{% endblock %}
         </main>
     </div>
+
+    <!-- ホームボタン（どのページでも表示） -->
+    <a href="{{ url_for('index') }}" class="home-cta" aria-label="ホームに戻る">
+        <div style="font-weight:600; color:#0f172a; padding-left:8px;">Home</div>
+        <div class="home-circle"><i class="bi bi-house-door-fill"></i></div>
+    </a>
 
     <footer class="footer">
         <div></div>
