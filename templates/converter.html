@@ -1,6 +1,17 @@
-{% extends "index.html" %}
+{% extends "layout.html" %}
+{% set page_title = 'HEIC to JPG 変換' %}
 
 {% block content %}
+<div class="d-flex align-items-center mb-4">
+    <div class="app-icon metal-steel me-3" style="width:72px;height:72px;border-radius:12px;">
+        <i class="bi bi-camera-fill" style="font-size:1.6rem; color:inherit;"></i>
+    </div>
+    <div>
+        <h2 class="mb-0">HEIC to JPG 変換</h2>
+        <small class="text-muted">EXIFを保持したままJPGへ変換します</small>
+    </div>
+</div>
+
 <div class="container">
     <p class="lead">iPhoneなどで撮影したHEIC形式の画像を、EXIF（メタデータ）を維持したまま汎用的なJPG形式に変換します。</p>
 

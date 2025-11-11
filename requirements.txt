@@ -1,5 +1,6 @@
 Flask>=2.2
 Pillow>=9.0
+pillow-heif>=0.10
 ezdxf>=1.0
 python-dotenv>=1.0
 gunicorn>=20.1.0
