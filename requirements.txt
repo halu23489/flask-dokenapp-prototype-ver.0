@@ -4,3 +4,5 @@ pillow-heif>=0.10
 ezdxf>=1.0
 python-dotenv>=1.0
 gunicorn>=20.1.0
+Flask-Limiter>=2.0
+redis>=4.0
