@@ -1,7 +1,9 @@
 import logging
 import os
 import io
-from flask import Flask, render_template, request, redirect, url_for, send_file, flash
+import sqlite3
+from datetime import datetime
+from flask import Flask, render_template, request, redirect, url_for, send_file, flash, g
 from PIL import Image
 
 # optional HEIC support
@@ -36,6 +38,53 @@ APP_NAVIGATION = {
 app = Flask(__name__)
 app.secret_key = os.environ.get('FLASK_SECRET', 'dev-secret')
 app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
+
+DB_PATH = os.path.join(os.path.dirname(__file__), 'data.db')
+
+def get_db():
+    db = getattr(g, '_database', None)
+    if db is None:
+        db = g._database = sqlite3.connect(DB_PATH)
+        db.row_factory = sqlite3.Row
+    return db
+
+def init_db():
+    db = sqlite3.connect(DB_PATH)
+    cur = db.cursor()
+    cur.execute('''
+    CREATE TABLE IF NOT EXISTS articles (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        title TEXT,
+        body TEXT NOT NULL,
+        tags TEXT,
+        created_at TEXT NOT NULL
+    )
+    ''')
+    cur.execute('''
+    CREATE TABLE IF NOT EXISTS comments (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        article_id INTEGER NOT NULL,
+        body TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        FOREIGN KEY(article_id) REFERENCES articles(id) ON DELETE CASCADE
+    )
+    ''')
+    db.commit()
+    db.close()
+
+# ← ここで直接初期化を呼ぶ（before_first_request を使わない）
+try:
+    init_db()
+except Exception:
+    # 起動時に DB 作成できなくてもアプリを止めたくない場合はログ出力のみ
+    import logging
+    logging.getLogger(__name__).warning('DB 初期化に失敗しました（起動後に再試行してください）。')
+
+@app.teardown_appcontext
+def close_connection(exception):
+    db = getattr(g, '_database', None)
+    if db is not None:
+        db.close()
 
 # 共通コンテキストを返すヘルパー
 def base_context(current_app='', page_title=''):
@@ -215,10 +264,80 @@ def comparison_tool_page():
     ctx = base_context(current_app='comparison_tool', page_title='比較見積もりツール')
     return render_template('comparison_tool.html', **ctx)
 
-@app.route('/forum')
+# --- フォーラム（記事一覧・投稿・詳細・コメント） ---
+@app.route('/forum', methods=['GET'])
 def forum():
+    tag = request.args.get('tag', '').strip().lower()
+    db = get_db()
+    cur = db.cursor()
+    if tag:
+        like = f'%{tag}%'
+        cur.execute("SELECT * FROM articles WHERE lower(tags) LIKE ? ORDER BY created_at DESC", (like,))
+    else:
+        cur.execute("SELECT * FROM articles ORDER BY created_at DESC")
+    articles = cur.fetchall()
     ctx = base_context(current_app='forum', page_title='知恵袋・掲示板')
-    return render_template('forum.html', **ctx)
+    return render_template('forum.html', articles=articles, tag=tag, **ctx)
+
+@app.route('/post_article', methods=['POST'])
+def post_article():
+    title = (request.form.get('title') or '').strip()
+    body = (request.form.get('body') or '').strip()
+    tags_raw = (request.form.get('tags') or '').strip()
+    if not body:
+        flash('本文は必須です。', 'warning')
+        return redirect(url_for('forum'))
+
+    # 正規化: カンマ区切り -> 小文字・空白除去
+    tags = ','.join([t.strip().lower() for t in tags_raw.split(',') if t.strip()])
+
+    db = get_db()
+    cur = db.cursor()
+    cur.execute("INSERT INTO articles (title, body, tags, created_at) VALUES (?, ?, ?, ?)",
+                (title, body, tags, datetime.utcnow().isoformat()))
+    db.commit()
+    flash('記事を投稿しました（匿名）。', 'success')
+    return redirect(url_for('forum'))
+
+@app.route('/article/<int:article_id>', methods=['GET'])
+def view_article(article_id):
+    db = get_db()
+    cur = db.cursor()
+    cur.execute("SELECT * FROM articles WHERE id = ?", (article_id,))
+    article = cur.fetchone()
+    if not article:
+        flash('記事が見つかりません。', 'warning')
+        return redirect(url_for('forum'))
+
+    # コメント取得
+    cur.execute("SELECT * FROM comments WHERE article_id = ? ORDER BY created_at ASC", (article_id,))
+    comments = cur.fetchall()
+
+    # 類似記事（同じタグを1つでも持つもの、最大6件）
+    similar = []
+    if article['tags']:
+        tags = [t.strip() for t in article['tags'].split(',') if t.strip()]
+        q_like = ' OR '.join(['lower(tags) LIKE ?' for _ in tags])
+        params = [f'%{t}%' for t in tags]
+        cur.execute(f"SELECT * FROM articles WHERE ({q_like}) AND id != ? ORDER BY created_at DESC LIMIT 6", (*params, article_id))
+        similar = cur.fetchall()
+
+    ctx = base_context(current_app='forum', page_title=article['title'] or '記事')
+    return render_template('article.html', article=article, comments=comments, similar=similar, **ctx)
+
+@app.route('/post_comment/<int:article_id>', methods=['POST'])
+def post_comment(article_id):
+    body = (request.form.get('comment_body') or '').strip()
+    if not body:
+        flash('コメントを入力してください。', 'warning')
+        return redirect(url_for('view_article', article_id=article_id))
+    db = get_db()
+    cur = db.cursor()
+    cur.execute("INSERT INTO comments (article_id, body, created_at) VALUES (?, ?, ?)",
+                (article_id, body, datetime.utcnow().isoformat()))
+    db.commit()
+    flash('コメントを投稿しました（匿名）。', 'success')
+    return redirect(url_for('view_article', article_id=article_id))
 
 if __name__ == '__main__':
     app.run(debug=True, host='127.0.0.1', port=5000)
