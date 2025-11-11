@@ -1,85 +1,187 @@
 {% extends "layout.html" %}
+{% set page_title = '単位換算' %}
 
 {% block content %}
-<p class="lead">長さ、重さ、体積と重さ（比重）などの基本的な単位を素早く換算します。</p>
-
 <div class="card shadow mb-4">
     <div class="card-header bg-success text-white">
         <h5 class="mb-0">単位換算ツール</h5>
     </div>
     <div class="card-body">
-        <form method="POST" action="{{ url_for('unit_converter_page') }}">
-            <div class="row g-3 align-items-center mb-4">
-                
-                <div class="col-md-3">
-                    <label for="inputValue" class="form-label">換算したい値:</label>
-                    <input type="number" step="any" class="form-control" id="inputValue" name="value" required>
-                </div>
-                
-                <div class="col-md-3">
-                    <label for="unitFrom" class="form-label">元の単位:</label>
-                    <select class="form-select" id="unitFrom" name="unit_from" required>
-                        <optgroup label="長さ">
-                            <option value="m">m (メートル)</option>
-                            <option value="cm">cm (センチメートル)</option>
-                            <option value="mm">mm (ミリメートル)</option>
-                        </optgroup>
-                        <optgroup label="重さ">
-                            <option value="t">t (トン)</option>
-                            <option value="kg">kg (キログラム)</option>
-                            <option value="g">g (グラム)</option>
-                        </optgroup>
-                        <optgroup label="体積 (比重換算用)">
-                            <option value="m3">m³ (立方メートル)</option>
-                            </optgroup>
+        <form method="POST" id="convForm">
+            <div class="row g-2 align-items-end">
+                <div class="col-12 col-md-3">
+                    <label class="form-label">モード</label>
+                    <select class="form-select" id="mode" name="mode">
+                        <option value="unit" {% if request.form.mode == 'unit' %}selected{% endif %}>通常単位換算</option>
+                        <option value="material" {% if request.form.mode == 'material' %}selected{% endif %}>材料（比重）による換算</option>
                     </select>
                 </div>
-                
-                <div class="col-md-1 text-center">
-                    <label class="form-label text-muted">&rarr;</label>
+
+                <div class="col-12 col-md-3">
+                    <label class="form-label">値</label>
+                    <input type="number" step="any" class="form-control" name="value" id="value" value="{{ request.form.value or '' }}" required>
                 </div>
-                
-                <div class="col-md-3">
-                    <label for="unitTo" class="form-label">換算後の単位:</label>
-                    <select class="form-select" id="unitTo" name="unit_to" required>
-                        <optgroup label="長さ">
-                            <option value="m">m (メートル)</option>
-                            <option value="cm">cm (センチメートル)</option>
-                            <option value="mm">mm (ミリメートル)</option>
-                        </optgroup>
-                        <optgroup label="重さ">
-                            <option value="t">t (トン)</option>
-                            <option value="kg">kg (キログラム)</option>
-                            <option value="g">g (グラム)</option>
-                        </optgroup>
-                        <optgroup label="体積 (比重換算用)">
-                            <option value="m3">m³ (立方メートル)</option>
-                            </optgroup>
+
+                <div class="col-12 col-md-3" id="categoryWrap">
+                    <label class="form-label">カテゴリ</label>
+                    <select class="form-select" id="category" name="category">
+                        <option value="length" {% if request.form.category == 'length' %}selected{% endif %}>長さ</option>
+                        <option value="weight" {% if request.form.category == 'weight' %}selected{% endif %}>重さ</option>
+                        <option value="volume" {% if request.form.category == 'volume' %}selected{% endif %}>体積</option>
+                    </select>
+                </div>
+
+                <div class="col-12 col-md-3" id="fromWrap">
+                    <label class="form-label">変換元</label>
+                    <select class="form-select" id="from_unit" name="from_unit"></select>
+                </div>
+
+                <div class="col-12 col-md-3" id="toWrap">
+                    <label class="form-label">変換先</label>
+                    <select class="form-select" id="to_unit" name="to_unit"></select>
+                </div>
+
+                <!-- material mode controls -->
+                <div class="col-12 col-md-3 d-none" id="materialSelectWrap">
+                    <label class="form-label">材料</label>
+                    <select class="form-select" id="material" name="material">
+                        {% for key, m in materials.items() %}
+                            <option value="{{ key }}" {% if request.form.material == key %}selected{% endif %}>{{ m.label }} (ρ={{ m.density }} kg/m³)</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="col-12 col-md-3 d-none" id="directionWrap">
+                    <label class="form-label">方向</label>
+                    <select class="form-select" id="direction" name="direction">
+                        <option value="vol_to_mass" {% if request.form.direction == 'vol_to_mass' %}selected{% endif %}>体積 → 質量</option>
+                        <option value="mass_to_vol" {% if request.form.direction == 'mass_to_vol' %}selected{% endif %}>質量 → 体積</option>
                     </select>
                 </div>
             </div>
-            
-            <div class="mb-4">
-                <label for="densityType" class="form-label">比重の種類 (m³ ⇔ t 換算時のみ選択):</label>
-                <select class="form-select" id="densityType" name="density_type">
-                    <option value="" selected>--- 選択不要 ---</option>
-                    {% for option in density_options %}
-                        <option value="{{ option }}">{{ option }}</option>
-                    {% endfor %}
-                </select>
-                <div class="form-text">例：m³をtに換算する場合に、物質の種類を選択してください。</div>
+
+            <div class="mt-3">
+                <button type="submit" class="btn btn-primary">換算</button>
             </div>
-            
-            <button type="submit" class="btn btn-success">換算</button>
         </form>
 
         {% if result %}
-        <hr class="my-4">
-        <div class="alert alert-info" role="alert">
-            <h4>換算結果</h4>
-            <p>{{ result }}</p>
-        </div>
+            <div class="alert alert-info mt-3" role="alert">
+                {% if result.mode == 'unit' %}
+                    {{ result.value }} {{ result.from }} ＝ <strong>{{ result.out }}</strong> {{ result.to }}
+                {% else %}
+                    {{ result.value }} {{ result.from_unit }} of {{ result.material }} ＝ <strong>{{ result.out }}</strong> {{ result.to_unit }}
+                    <div class="small text-muted">使用した比重: {{ result.density }} kg/m³</div>
+                {% endif %}
+            </div>
         {% endif %}
     </div>
 </div>
+
+<script>
+(function(){
+    const units = {
+        length: [
+            {v:'m', t:'メートル (m)'},
+            {v:'cm', t:'センチメートル (cm)'},
+            {v:'mm', t:'ミリメートル (mm)'},
+            {v:'km', t:'キロメートル (km)'},
+            {v:'ft', t:'フィート (ft)'},
+            {v:'in', t:'インチ (in)'}
+        ],
+        weight: [
+            {v:'kg', t:'キログラム (kg)'},
+            {v:'g', t:'グラム (g)'},
+            {v:'t', t:'トン (t)'},
+            {v:'lb', t:'ポンド (lb)'}
+        ],
+        volume: [
+            {v:'m3', t:'立方メートル (m³)'},
+            {v:'l', t:'リットル (L)'},
+            {v:'ml', t:'ミリリットル (mL)'}
+        ]
+    };
+
+    const modeEl = document.getElementById('mode');
+    const category = document.getElementById('category');
+    const from = document.getElementById('from_unit');
+    const to = document.getElementById('to_unit');
+    const materialWrap = document.getElementById('materialSelectWrap');
+    const directionWrap = document.getElementById('directionWrap');
+    const categoryWrap = document.getElementById('categoryWrap');
+
+    function populate(cat){
+        from.innerHTML = '';
+        to.innerHTML = '';
+        units[cat].forEach(u=>{
+            const o1 = document.createElement('option');
+            o1.value = u.v; o1.textContent = u.t;
+            const o2 = o1.cloneNode(true);
+            from.appendChild(o1);
+            to.appendChild(o2);
+        });
+    }
+
+    function updateVisibility(){
+        if(modeEl.value === 'material'){
+            materialWrap.classList.remove('d-none');
+            directionWrap.classList.remove('d-none');
+            // material mode uses mass <-> volume; hide category selector and set placeholder units
+            categoryWrap.classList.add('d-none');
+            // populate from/to with sensible defaults for volume/mass (we'll set based on direction)
+            const dir = document.getElementById('direction').value || 'vol_to_mass';
+            if(dir === 'vol_to_mass'){
+                // from = volume, to = mass
+                from.innerHTML = '';
+                units['volume'].forEach(u=> { const o = document.createElement('option'); o.value=u.v; o.textContent=u.t; from.appendChild(o); });
+                to.innerHTML = '';
+                units['weight'].forEach(u=> { const o = document.createElement('option'); o.value=u.v; o.textContent=u.t; to.appendChild(o); });
+            }else{
+                from.innerHTML = '';
+                units['weight'].forEach(u=> { const o = document.createElement('option'); o.value=u.v; o.textContent=u.t; from.appendChild(o); });
+                to.innerHTML = '';
+                units['volume'].forEach(u=> { const o = document.createElement('option'); o.value=u.v; o.textContent=u.t; to.appendChild(o); });
+            }
+        }else{
+            materialWrap.classList.add('d-none');
+            directionWrap.classList.add('d-none');
+            categoryWrap.classList.remove('d-none');
+            populate(category.value || 'length');
+        }
+    }
+
+    // 初期セット
+    category.addEventListener('change', ()=> populate(category.value));
+    modeEl.addEventListener('change', updateVisibility);
+    document.getElementById('direction').addEventListener('change', updateVisibility);
+
+    // 初期表示: サーバーのフォーム値を反映
+    const serverMode = '{{ request.form.mode if request.form.mode else "unit" }}';
+    modeEl.value = serverMode;
+    if(serverMode === 'unit'){
+        const serverCat = '{{ request.form.category if request.form.category else "length" }}';
+        category.value = serverCat;
+        populate(serverCat);
+        // 選択済み units があれば選択
+        setTimeout(()=> {
+            const sf = '{{ request.form.from_unit or "" }}';
+            const st = '{{ request.form.to_unit or "" }}';
+            if(sf) from.value = sf;
+            if(st) to.value = st;
+        }, 10);
+    } else {
+        updateVisibility();
+        setTimeout(()=> {
+            const sf = '{{ request.form.from_unit or "" }}';
+            const st = '{{ request.form.to_unit or "" }}';
+            if(sf) from.value = sf;
+            if(st) to.value = st;
+            const sd = '{{ request.form.direction or "vol_to_mass" }}';
+            document.getElementById('direction').value = sd;
+            document.getElementById('direction').dispatchEvent(new Event('change'));
+        }, 10);
+    }
+
+})();
+</script>
 {% endblock %}
