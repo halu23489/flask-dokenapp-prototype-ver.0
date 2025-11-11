@@ -12,6 +12,20 @@ from flask_limiter.util import get_remote_address
 import re
 from werkzeug.routing import BuildError
 
+# --- 定数定義（追加） ---
+MAX_TAGS = 5
+FORBIDDEN_WORDS = ['spam', 'test']
+MAX_ARTICLE_LENGTH = 5000
+MAX_COMMENT_LENGTH = 1000
+
+def check_spam_content(body, max_len):
+    """プレースホルダーのスパムチェック関数"""
+    if len(body) > max_len:
+        return True, f"本文が長すぎます (最大 {max_len} 文字)"
+    # ここに正規表現やキーワードチェックを追加可能
+    return False, ""
+# --- 定数定義（追加ここまで） ---
+
 # optional HEIC support
 try:
     import pillow_heif
@@ -78,11 +92,10 @@ def init_db():
     db.commit()
     db.close()
 
-# ← ここで直接初期化を呼ぶ（before_first_request を使わない）
+# DB 初期化を試行
 try:
     init_db()
 except Exception:
-    # 起動時に DB 作成できなくてもアプリを止めたくない場合はログ出力のみ
     import logging
     logging.getLogger(__name__).warning('DB 初期化に失敗しました（起動後に再試行してください）。')
 
@@ -123,8 +136,26 @@ limiter = Limiter(
     app=app
 )
 
-# ルートに対して個別制限を付ける例（投稿系は低めの制限）
+# --- ルーティングの追加・修正 ---
+
+# 1. ホームページ (ルート / ) の追加
+@app.route('/')
+def index():
+    """ホーム (ダッシュボード)"""
+    ctx = base_context(current_app='index', page_title=APP_NAME)
+    # ここにダッシュボード情報を追加する
+    return render_template('index.html', **ctx)
+
+# 2. HEIC to JPG 変換ページ (GET) の追加 (ナビゲーションで 'converter_page' を参照しているため)
+@app.route('/converter')
+def converter_page():
+    """HEIC to JPG 変換ページ (GET)"""
+    ctx = base_context(current_app='converter', page_title='HEIC to JPG 変換')
+    return render_template('converter.html', **ctx)
+
+# 記事投稿 (既存の関数を流用。重複定義を避けるため、後方にある同名ルートを削除しました)
 @app.route('/post_article', methods=['POST'])
+@limiter.limit("5 per minute") # 投稿系なので制限を強化
 def post_article_submit():
     title = (request.form.get('title') or '').strip()
     body = (request.form.get('body') or '').strip()
@@ -161,7 +192,9 @@ def post_article_submit():
     flash('記事を投稿しました（匿名）。', 'success')
     return redirect(url_for('forum'))
 
+# コメント投稿 (既存の関数)
 @app.route('/post_comment/<int:article_id>', methods=['POST'])
+@limiter.limit("10 per hour") # コメント投稿も制限を強化
 def post_comment_submit(article_id):
     body = (request.form.get('comment_body') or '').strip()
     if not body:
@@ -182,8 +215,9 @@ def post_comment_submit(article_id):
     flash('コメントを投稿しました（匿名）。', 'success')
     return redirect(url_for('view_article', article_id=article_id))
 
+# HEIC変換 (既存の関数)
 @app.route('/convert', methods=['POST'])
-@limiter.limit("30 per hour")           # HEIC変換アップロード: 1時間に30回まで
+@limiter.limit("30 per hour")
 def convert_file():
     heic = request.files.get('heic_file')
     if not heic:
@@ -215,6 +249,7 @@ def convert_file():
     download_name = f'{base}.jpg'
     return send_file(out, mimetype='image/jpeg', as_attachment=True, download_name=download_name)
 
+# 単位換算ページ (既存の関数)
 @app.route('/unit_converter', methods=['GET', 'POST'])
 def unit_converter_page():
     ctx = base_context(current_app='unit_converter', page_title='単位換算')
@@ -244,8 +279,8 @@ def unit_converter_page():
                 to = request.form.get('to_unit')
 
                 def convert(value, frm, to, table):
-                    base = value * table[frm]           # convert to base unit
-                    return base / table[to]             # convert base to target
+                    base = value * table[frm]        # convert to base unit
+                    return base / table[to]          # convert base to target
 
                 if category == 'length':
                     table = {'m':1.0, 'cm':0.01, 'mm':0.001, 'km':1000.0, 'ft':0.3048, 'in':0.0254}
@@ -321,22 +356,15 @@ def unit_converter_page():
     ctx['materials'] = MATERIALS
     return render_template('unit_converter.html', **ctx)
 
+# DXF座標出力ツール (既存の関数)
 @app.route('/dxf_tool')
 def dxf_tool_page():
     ctx = base_context(current_app='dxf_tool', page_title='DXF座標出力ツール')
     return render_template('dxf_tool.html', **ctx)
 
 @app.route('/generate_dxf', methods=['POST'])
-@limiter.limit("60 per hour")           # DXF生成: 1時間に60回まで
+@limiter.limit("60 per hour")
 def generate_dxf():
-    """
-    フォームの座標テキストを解析して DXF を生成し、ダウンロードさせる。
-    期待する行フォーマット（例）:
-      Label, 100.0, 200.0
-      P2,150.5,210.25
-    または座標だけ:
-      100.0,200.0
-    """
     coord_text = (request.form.get('coordinate_data') or '').strip()
     layer_name = (request.form.get('app_layer') or 'POINTS').strip()
     filename = (request.form.get('dxf_name') or 'coordinate_output').strip()
@@ -402,11 +430,13 @@ def generate_dxf():
         flash(f'DXF 生成に失敗しました: {e}', 'danger')
         return redirect(url_for('dxf_tool_page'))
 
+# 計算ツール (既存の関数)
 @app.route('/calculator')
 def calculator():
     ctx = base_context(current_app='calculator', page_title='計算ツール')
     return render_template('calc.html', **ctx)
 
+# 比較見積もりツール (既存の関数)
 @app.route('/comparison_tool')
 def comparison_tool_page():
     ctx = base_context(current_app='comparison_tool', page_title='比較見積もりツール')
@@ -425,45 +455,13 @@ def forum():
         cur.execute("SELECT * FROM articles ORDER BY created_at DESC")
     articles = cur.fetchall()
     ctx = base_context(current_app='forum', page_title='知恵袋・掲示板')
-    return render_template('forum.html', articles=articles, tag=tag, **ctx)
+    # tagsをリストに変換するヘルパー関数
+    def get_tag_list(tags_str):
+        return [t.strip() for t in (tags_str or '').split(',') if t.strip()]
+    
+    return render_template('forum.html', articles=articles, tag=tag, get_tag_list=get_tag_list, **ctx)
 
-@app.route('/post_article', methods=['POST'])
-def post_article():
-    title = (request.form.get('title') or '').strip()
-    body = (request.form.get('body') or '').strip()
-    tags_raw = (request.form.get('tags') or '').strip()
-
-    # タグ数チェック・正規化
-    tags = [t.strip().lower() for t in tags_raw.split(',') if t.strip()]
-    if len(tags) > MAX_TAGS:
-        flash(f'タグは最大 {MAX_TAGS} 個までです。', 'warning')
-        return redirect(url_for('forum'))
-    # タグに禁止語が含まれないか
-    for t in tags:
-        for w in FORBIDDEN_WORDS:
-            if w.lower() in t.lower():
-                flash('タグに不適切な語句が含まれています。', 'warning')
-                return redirect(url_for('forum'))
-    tags_joined = ','.join(tags)
-
-    if not body:
-        flash('本文は必須です。', 'warning')
-        return redirect(url_for('forum'))
-
-    # スパムチェック（記事は長めを許容）
-    is_spam, reason = check_spam_content(body, MAX_ARTICLE_LENGTH)
-    if is_spam:
-        flash(f'投稿を受け付けられません: {reason}', 'warning')
-        return redirect(url_for('forum'))
-
-    db = get_db()
-    cur = db.cursor()
-    cur.execute("INSERT INTO articles (title, body, tags, created_at) VALUES (?, ?, ?, ?)",
-                (title, body, tags_joined, datetime.utcnow().isoformat()))
-    db.commit()
-    flash('記事を投稿しました（匿名）。', 'success')
-    return redirect(url_for('forum'))
-
+# 記事詳細 (既存の関数)
 @app.route('/article/<int:article_id>', methods=['GET'])
 def view_article(article_id):
     db = get_db()
@@ -484,32 +482,23 @@ def view_article(article_id):
         tags = [t.strip() for t in article['tags'].split(',') if t.strip()]
         q_like = ' OR '.join(['lower(tags) LIKE ?' for _ in tags])
         params = [f'%{t}%' for t in tags]
-        cur.execute(f"SELECT * FROM articles WHERE ({q_like}) AND id != ? ORDER BY created_at DESC LIMIT 6", (*params, article_id))
-        similar = cur.fetchall()
+        # SQL の INJECTION 対策は、SQLite の LIKE クエリとプレースホルダーで対処。
+        # ただし、tags が空の場合はクエリが不正になるため、tagsの存在チェックを強化。
+        if tags:
+            cur.execute(f"SELECT * FROM articles WHERE ({q_like}) AND id != ? ORDER BY created_at DESC LIMIT 6", (*params, article_id))
+            similar = cur.fetchall()
+
+    def get_tag_list(tags_str):
+        return [t.strip() for t in (tags_str or '').split(',') if t.strip()]
 
     ctx = base_context(current_app='forum', page_title=article['title'] or '記事')
-    return render_template('article.html', article=article, comments=comments, similar=similar, **ctx)
+    return render_template('article.html', article=article, comments=comments, similar=similar, get_tag_list=get_tag_list, **ctx)
 
-@app.route('/post_comment/<int:article_id>', methods=['POST'])
-def post_comment(article_id):
-    body = (request.form.get('comment_body') or '').strip()
-    if not body:
-        flash('コメントを入力してください。', 'warning')
-        return redirect(url_for('view_article', article_id=article_id))
-
-    # スパムチェック（短め）
-    is_spam, reason = check_spam_content(body, MAX_COMMENT_LENGTH)
-    if is_spam:
-        flash(f'コメントを受け付けられません: {reason}', 'warning')
-        return redirect(url_for('view_article', article_id=article_id))
-
-    db = get_db()
-    cur = db.cursor()
-    cur.execute("INSERT INTO comments (article_id, body, created_at) VALUES (?, ?, ?)",
-                (article_id, body, datetime.utcnow().isoformat()))
-    db.commit()
-    flash('コメントを投稿しました（匿名）。', 'success')
-    return redirect(url_for('view_article', article_id=article_id))
+# コメント投稿 (既存の関数。重複定義を避けるため、post_comment_submitと統合)
+# このルーティングは post_comment_submit で定義済みのため削除
+# @app.route('/post_comment/<int:article_id>', methods=['POST'])
+# def post_comment(article_id):
+#     ... (削除)
 
 @app.route('/_routes_debug')
 def _routes_debug():
@@ -519,4 +508,5 @@ def _routes_debug():
     return "<br>".join(sorted(out))
 
 if __name__ == '__main__':
+    # 開発環境で実行する場合
     app.run(debug=True, host='127.0.0.1', port=5000)
