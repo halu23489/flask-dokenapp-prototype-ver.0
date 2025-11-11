@@ -4,7 +4,9 @@
 {% set page_title = '比較見積もりツール' %}
 
 {% block extra_head %}
-    {# Tailwind CSSの読み込みを削除し、汎用的なCSSを使用 #}
+    <!-- SheetJS (xlsx.js) ライブラリを読み込み、XLSX出力に対応 -->
+    <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
+
     <style>
         /* 汎用的なスタイル設定 */
         .table-container { overflow-x: auto; margin-top: 20px; }
@@ -75,8 +77,8 @@
         #addColumn:hover { background-color: #45a049; }
         #addRow { background-color: #2196F3; color: white; }
         #addRow:hover { background-color: #0b7dda; }
-        #exportCsv { background-color: #757575; color: white; }
-        #exportCsv:hover { background-color: #616161; }
+        #exportXlsx { background-color: #757575; color: white; } /* IDをCSVからXLSXに変更 */
+        #exportXlsx:hover { background-color: #616161; }
 
         /* 画像プレビュー */
         .image-preview { 
@@ -87,6 +89,14 @@
             margin: 8px auto 0; 
             display: block; 
             border: 1px solid #eee; 
+        }
+        /* 画像ファイル入力のスタイル調整 */
+        .image-input { display: none !important; }
+        .image-label { 
+            color: #007bff; 
+            cursor: pointer; 
+            display: block; 
+            margin-bottom: 5px;
         }
     </style>
 {% endblock %}
@@ -104,8 +114,9 @@
         <button id="addRow">
             + 比較項目を追加
         </button>
-        <button id="exportCsv">
-            CSVダウンロード
+        <!-- ボタンIDをXLSXに変更 -->
+        <button id="exportXlsx">
+            XLSXダウンロード
         </button>
     </div>
 
@@ -135,13 +146,13 @@
                 <tr data-type="image-row">
                     <td class="sticky-header row-header">画像/写真</td>
                     <td class="data-cell" data-col="1" style="text-align: center;">
-                        <input type="file" class="hidden image-input" accept="image/*" id="file1" onchange="previewImage(this, 1)">
-                        <label for="file1" style="color: #007bff; cursor: pointer;">画像を選択</label>
+                        <input type="file" class="image-input" accept="image/*" id="file1" onchange="previewImage(this, 1)">
+                        <label for="file1" class="image-label" id="label1">画像を選択</label>
                         <img class="image-preview hidden" id="preview1" alt="画像プレビュー">
                     </td>
                     <td class="data-cell" data-col="2" style="text-align: center;">
-                        <input type="file" class="hidden image-input" accept="image/*" id="file2" onchange="previewImage(this, 2)">
-                        <label for="file2" style="color: #007bff; cursor: pointer;">画像を選択</label>
+                        <input type="file" class="image-input" accept="image/*" id="file2" onchange="previewImage(this, 2)">
+                        <label for="file2" class="image-label" id="label2">画像を選択</label>
                         <img class="image-preview hidden" id="preview2" alt="画像プレビュー">
                     </td>
                 </tr>
@@ -194,7 +205,8 @@
         const tableBody = document.getElementById('tableBody');
         const addColumnButton = document.getElementById('addColumn');
         const addRowButton = document.getElementById('addRow');
-        const exportCsvButton = document.getElementById('exportCsv');
+        // IDをexportXlsxに変更
+        const exportXlsxButton = document.getElementById('exportXlsx'); 
         
         // 1. 列の数を初期化 (比較項目列を除く)
         let colCount = tableHeaderRow.querySelectorAll('.col-header-input').length; // 初期値: 2 (製品A, 製品B)
@@ -216,7 +228,7 @@
          */
         window.previewImage = function(input, colIndex) {
             const preview = document.getElementById(`preview${colIndex}`);
-            const label = input.nextElementSibling;
+            const label = document.getElementById(`label${colIndex}`); // ラベルIDを取得
             if (input.files && input.files[0]) {
                 const reader = new FileReader();
                 reader.onload = function(e) {
@@ -244,7 +256,6 @@
             const newHeader = document.createElement('th');
             newHeader.className = 'col-header-input';
             newHeader.setAttribute('colspan', '1');
-            // style="text-align: center;" をeditableにも適用
             newHeader.innerHTML = `<input type="text" value="新規対象 ${colCount}" class="editable" style="text-align: center;">`;
             tableHeaderRow.appendChild(newHeader);
 
@@ -259,8 +270,8 @@
                     // 画像/写真行
                     newCell.style.textAlign = 'center'; // 画像セルは中央寄せ
                     newCell.innerHTML = `
-                        <input type="file" class="hidden image-input" accept="image/*" id="file${colCount}" onchange="previewImage(this, ${colCount})">
-                        <label for="file${colCount}" style="color: #007bff; cursor: pointer;">画像を選択</label>
+                        <input type="file" class="image-input" accept="image/*" id="file${colCount}" onchange="previewImage(this, ${colCount})">
+                        <label for="file${colCount}" class="image-label" id="label${colCount}">画像を選択</label>
                         <img class="image-preview hidden" id="preview${colCount}" alt="画像プレビュー">
                     `;
                 } else {
@@ -270,7 +281,6 @@
                     // 金額行のスタイルをコピー
                     if (row.classList.contains('highlight-row')) {
                          newCell.style.fontWeight = 'bold';
-                         newCell.classList.add('highlight-row'); // 行全体に適用されているクラスをセルにもコピー (CSSで調整)
                     }
                 }
             }
@@ -299,90 +309,80 @@
         });
         
         /**
-         * CSVエスケープ処理
-         * - 値にカンマ、改行、ダブルクォートが含まれていれば、全体をダブルクォートで囲み、内部のダブルクォートを二重にする。
+         * XLSXダウンロード機能
+         * SheetJSライブラリを使用して、テーブルデータをXLSX形式でエクスポートします。
          */
-        const csvEscape = (value) => {
-            if (value === null || value === undefined) return '';
-            let val = String(value).trim();
-            
-            // 値にカンマ、改行、ダブルクォートが含まれていなければエスケープ不要
-            if (!val.includes(',') && !val.includes('\n') && !val.includes('\r') && !val.includes('"')) {
-                return val;
-            }
-            
-            // 文字列化し、改行をスペースに、内部のダブルクォートを二重にエスケープ
-            val = val.replace(/(\r\n|\n|\r)/gm, " ").replace(/"/g, '""');
-            
-            // 値全体をダブルクォートで囲む
-            return `"${val}"`;
-        };
-
-        // CSVダウンロード機能
-        exportCsvButton.addEventListener('click', () => {
-            let csv = [];
+        exportXlsxButton.addEventListener('click', () => {
+            const data = [];
             const rows = tableBody.rows;
 
             // 1. ヘッダー行 (比較項目 + 製品名) を取得
             let header = [];
-            header.push(csvEscape('比較項目')); // 常に最初の列は「比較項目」
+            header.push('比較項目'); 
             
             const headerInputs = tableHeaderRow.querySelectorAll('.col-header-input input');
             headerInputs.forEach(input => {
-                header.push(csvEscape(input.value));
+                header.push(input.value);
             }); 
-            csv.push(header.join(','));
+            data.push(header);
 
             // 2. データ行を取得
             for (let i = 0; i < rows.length; i++) {
                 const rowElement = rows[i];
-                const cells = rowElement.querySelectorAll('td');
+                // 最初の<td>は行ヘッダー、残りの<td>はデータセル
+                const allCells = rowElement.querySelectorAll('td'); 
                 let row = [];
                 
                 // 2.1. 比較項目名 (最初のセル)
-                const itemCell = cells[0];
+                const itemCell = allCells[0];
                 let itemCellContent = '';
 
                 if (rowElement.getAttribute('data-type') === 'image-row') {
-                    itemCellContent = itemCell.textContent.trim(); // "画像/写真"
+                    // 画像/写真行
+                    itemCellContent = itemCell.textContent.trim(); 
                 } else {
+                    // 通常のデータ行
                     const contentElement = itemCell.querySelector('span[contenteditable="true"]');
-                    itemCellContent = contentElement ? contentElement.textContent : '';
+                    // 複数行入力の可能性を考慮し、textContentを取得
+                    itemCellContent = contentElement ? contentElement.textContent.trim() : '';
                 }
                 
-                row.push(csvEscape(itemCellContent));
+                row.push(itemCellContent);
 
                 // 2.2. 各比較対象のデータ
-                for (let j = 1; j < cells.length; j++) {
-                    const cell = cells[j];
+                // i=1 から始めることで、最初の比較項目セルはスキップ
+                for (let j = 1; j < allCells.length; j++) { 
+                    const cell = allCells[j];
                     let cellValue = '';
                     
                     if (rowElement.getAttribute('data-type') === 'image-row') { 
-                        // 画像行: ファイル名を取得
+                        // 画像行: ファイル名を取得 (画像データ自体はXLSXには含めません)
                         const fileInput = cell.querySelector('.image-input');
-                        cellValue = fileInput && fileInput.files[0] ? fileInput.files[0].name : '';
+                        cellValue = fileInput && fileInput.files[0] ? `[画像ファイル: ${fileInput.files[0].name}]` : '';
                     } else {
                         // 通常のデータ行: contenteditableの内容を取得
                         const contentElement = cell.querySelector('span[contenteditable="true"]');
-                        cellValue = contentElement ? contentElement.textContent : '';
+                        cellValue = contentElement ? contentElement.textContent.trim() : '';
                     }
                     
-                    row.push(csvEscape(cellValue));
+                    row.push(cellValue);
                 }
-                csv.push(row.join(','));
+                data.push(row);
             }
 
-            // CSVデータを作成
-            const csvString = csv.join('\n');
+            // 3. SheetJSを使用してXLSXを生成
+            // data (配列の配列)からワークシートを作成
+            const worksheet = XLSX.utils.aoa_to_sheet(data);
+
+            // ワークブックの作成
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "比較データ");
             
-            // ダウンロード処理 (BOM付きUTF-8で日本語対応)
-            const blob = new Blob(["\uFEFF" + csvString], { type: 'text/csv;charset=utf-8;' }); 
-            const link = document.createElement('a');
-            link.href = URL.createObjectURL(blob);
-            link.download = '比較見積もりデータ.csv';
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
+            // ファイルの書き出し
+            XLSX.writeFile(workbook, "比較見積もりデータ.xlsx");
+
+            // ダウンロードが完了したことをユーザーに知らせるアラートの代わりに、コンソールにメッセージを出力
+            console.log('比較見積もりデータ.xlsx のダウンロードをトリガーしました。');
         });
     });
 </script>
