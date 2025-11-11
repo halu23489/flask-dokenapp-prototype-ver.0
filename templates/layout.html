@@ -277,15 +277,37 @@
             const sidebar = document.getElementById('mainSidebar');
             const overlay = document.getElementById('sidebarOverlay');
 
+            // 初期状態を確実にリセット
+            function resetOverlay() {
+                overlay.style.display = 'none';
+                overlay.style.opacity = '0';
+                overlay.style.pointerEvents = 'none';
+                overlay.classList.remove('open');
+                overlay.setAttribute('aria-hidden','true');
+            }
+            resetOverlay();
+
             function openSidebar(){
                 sidebar.classList.add('open');
-                overlay.classList.add('open');
-                overlay.setAttribute('aria-hidden','false');
+                overlay.style.display = 'block';
+                // 少し遅延してトランジションを発火
+                requestAnimationFrame(()=> {
+                    overlay.style.opacity = '1';
+                    overlay.style.pointerEvents = 'auto';
+                    overlay.classList.add('open');
+                    overlay.setAttribute('aria-hidden','false');
+                });
             }
             function closeSidebar(){
                 sidebar.classList.remove('open');
+                overlay.style.opacity = '0';
+                overlay.style.pointerEvents = 'none';
                 overlay.classList.remove('open');
                 overlay.setAttribute('aria-hidden','true');
+                // CSSトランジション後に display を none に
+                setTimeout(()=> {
+                    if (!overlay.classList.contains('open')) overlay.style.display = 'none';
+                }, 220);
             }
 
             if(btn){
@@ -297,18 +319,20 @@
             if(overlay){
                 overlay.addEventListener('click', closeSidebar);
             }
-            // サイドバー内リンクを押したら閉じる（モバイル時）
+            // サイドバー内リンクを押したら閉じる（モバイル時）。ナビゲートを妨げない。
             document.querySelectorAll('.sidebar .nav-link').forEach(link=>{
                 link.addEventListener('click', function(){
-                    if(window.innerWidth <= 992) closeSidebar();
-                });
+                    if(window.innerWidth <= 992) {
+                        // 少し遅延して閉じる（遷移が始まる前に overlay が残らないように）
+                        setTimeout(closeSidebar, 50);
+                    }
+                }, {passive:true});
             });
             // 画面リサイズ時にサイドバー状態をリセット
             window.addEventListener('resize', function(){
                 if(window.innerWidth > 992){
                     sidebar.classList.remove('open');
-                    overlay.classList.remove('open');
-                    overlay.setAttribute('aria-hidden','true');
+                    resetOverlay();
                 }
             });
         })();
