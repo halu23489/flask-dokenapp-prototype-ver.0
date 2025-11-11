@@ -5,6 +5,12 @@ import sqlite3
 from datetime import datetime
 from flask import Flask, render_template, request, redirect, url_for, send_file, flash, g
 from PIL import Image
+import ezdxf
+from io import BytesIO
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
+import re
+from werkzeug.routing import BuildError
 
 # optional HEIC support
 try:
@@ -86,7 +92,20 @@ def close_connection(exception):
     if db is not None:
         db.close()
 
-# 共通コンテキストを返すヘルパー
+def safe_url_for(endpoint, **values):
+    """
+    url_for を安全に呼び出す。存在しない endpoint の場合は '#' を返す。
+    テンプレートから呼べるよう jinja globals に登録する。
+    """
+    try:
+        return url_for(endpoint, **values)
+    except BuildError:
+        return '#'
+
+# テンプレートで safe_url_for を使えるよう登録
+app.jinja_env.globals['safe_url_for'] = safe_url_for
+
+# base_context はエンドポイント名をそのまま渡す（url_for はテンプレート側で評価）
 def base_context(current_app='', page_title=''):
     return {
         'nav': APP_NAVIGATION,
@@ -95,18 +114,76 @@ def base_context(current_app='', page_title=''):
         'app_name': APP_NAME,
     }
 
-# ルート定義
-@app.route('/')
-def index():
-    ctx = base_context(current_app='index', page_title='ホーム')
-    return render_template('index.html', **ctx)
+# レートリミッター設定
+storage_uri = os.environ.get('RATELIMIT_STORAGE_URI', 'memory://')
+limiter = Limiter(
+    key_func=get_remote_address,
+    default_limits=["200 per hour"],
+    storage_uri=storage_uri,
+    app=app
+)
 
-@app.route('/converter')
-def converter_page():
-    ctx = base_context(current_app='converter', page_title='HEIC to JPG 変換')
-    return render_template('converter.html', **ctx)
+# ルートに対して個別制限を付ける例（投稿系は低めの制限）
+@app.route('/post_article', methods=['POST'])
+def post_article_submit():
+    title = (request.form.get('title') or '').strip()
+    body = (request.form.get('body') or '').strip()
+    tags_raw = (request.form.get('tags') or '').strip()
+
+    # タグ数チェック・正規化
+    tags = [t.strip().lower() for t in tags_raw.split(',') if t.strip()]
+    if len(tags) > MAX_TAGS:
+        flash(f'タグは最大 {MAX_TAGS} 個までです。', 'warning')
+        return redirect(url_for('forum'))
+    # タグに禁止語が含まれないか
+    for t in tags:
+        for w in FORBIDDEN_WORDS:
+            if w.lower() in t.lower():
+                flash('タグに不適切な語句が含まれています。', 'warning')
+                return redirect(url_for('forum'))
+    tags_joined = ','.join(tags)
+
+    if not body:
+        flash('本文は必須です。', 'warning')
+        return redirect(url_for('forum'))
+
+    # スパムチェック（記事は長めを許容）
+    is_spam, reason = check_spam_content(body, MAX_ARTICLE_LENGTH)
+    if is_spam:
+        flash(f'投稿を受け付けられません: {reason}', 'warning')
+        return redirect(url_for('forum'))
+
+    db = get_db()
+    cur = db.cursor()
+    cur.execute("INSERT INTO articles (title, body, tags, created_at) VALUES (?, ?, ?, ?)",
+                (title, body, tags_joined, datetime.utcnow().isoformat()))
+    db.commit()
+    flash('記事を投稿しました（匿名）。', 'success')
+    return redirect(url_for('forum'))
+
+@app.route('/post_comment/<int:article_id>', methods=['POST'])
+def post_comment_submit(article_id):
+    body = (request.form.get('comment_body') or '').strip()
+    if not body:
+        flash('コメントを入力してください。', 'warning')
+        return redirect(url_for('view_article', article_id=article_id))
+
+    # スパムチェック等...
+    is_spam, reason = check_spam_content(body, MAX_COMMENT_LENGTH)
+    if is_spam:
+        flash(f'コメントを受け付けられません: {reason}', 'warning')
+        return redirect(url_for('view_article', article_id=article_id))
+
+    db = get_db()
+    cur = db.cursor()
+    cur.execute("INSERT INTO comments (article_id, body, created_at) VALUES (?, ?, ?)",
+                (article_id, body, datetime.utcnow().isoformat()))
+    db.commit()
+    flash('コメントを投稿しました（匿名）。', 'success')
+    return redirect(url_for('view_article', article_id=article_id))
 
 @app.route('/convert', methods=['POST'])
+@limiter.limit("30 per hour")           # HEIC変換アップロード: 1時間に30回まで
 def convert_file():
     heic = request.files.get('heic_file')
     if not heic:
@@ -250,9 +327,80 @@ def dxf_tool_page():
     return render_template('dxf_tool.html', **ctx)
 
 @app.route('/generate_dxf', methods=['POST'])
+@limiter.limit("60 per hour")           # DXF生成: 1時間に60回まで
 def generate_dxf():
-    flash('DXF生成処理は未実装です。', 'info')
-    return redirect(url_for('dxf_tool_page'))
+    """
+    フォームの座標テキストを解析して DXF を生成し、ダウンロードさせる。
+    期待する行フォーマット（例）:
+      Label, 100.0, 200.0
+      P2,150.5,210.25
+    または座標だけ:
+      100.0,200.0
+    """
+    coord_text = (request.form.get('coordinate_data') or '').strip()
+    layer_name = (request.form.get('app_layer') or 'POINTS').strip()
+    filename = (request.form.get('dxf_name') or 'coordinate_output').strip()
+    if not coord_text:
+        flash('座標データが入力されていません。', 'warning')
+        return redirect(url_for('dxf_tool_page'))
+
+    points = []
+    for raw_line in coord_text.splitlines():
+        line = raw_line.strip()
+        if not line:
+            continue
+        # カンマ区切り優先、スペース区切りも許容
+        parts = [p.strip() for p in line.split(',') if p.strip()]
+        if len(parts) == 1:
+            # 1要素のみは無視
+            continue
+        if len(parts) == 2:
+            # x,y のみ
+            label = ''
+            try:
+                x = float(parts[0])
+                y = float(parts[1])
+            except Exception:
+                continue
+        else:
+            # label, x, y （ラベルにカンマを含む場合最後2つを座標とみなす）
+            try:
+                x = float(parts[-2])
+                y = float(parts[-1])
+                label = ','.join(parts[:-2])
+            except Exception:
+                # 解析できなければスキップ
+                continue
+        points.append({'label': label, 'x': x, 'y': y})
+
+    if not points:
+        flash('有効な座標が見つかりませんでした。フォーマットを確認してください。', 'warning')
+        return redirect(url_for('dxf_tool_page'))
+
+    try:
+        doc = ezdxf.new(dxfversion='R2010')
+        # レイヤー作成（存在しなければ）
+        if layer_name not in doc.layers:
+            doc.layers.new(name=layer_name)
+        msp = doc.modelspace()
+
+        for pt in points:
+            x, y = pt['x'], pt['y']
+            # 点を追加
+            msp.add_point((x, y), dxfattribs={'layer': layer_name})
+            # ラベルがあれば小さめのテキストを追加（右上に少しずらす）
+            if pt['label']:
+                txt = msp.add_text(str(pt['label']), dxfattribs={'height': 0.25, 'layer': layer_name})
+                txt.set_pos((x + 0.2, y + 0.2), align='LEFT')
+
+        buf = BytesIO()
+        doc.saveas(buf)
+        buf.seek(0)
+        download_name = f"{filename}.dxf"
+        return send_file(buf, mimetype='application/dxf', as_attachment=True, download_name=download_name)
+    except Exception as e:
+        flash(f'DXF 生成に失敗しました: {e}', 'danger')
+        return redirect(url_for('dxf_tool_page'))
 
 @app.route('/calculator')
 def calculator():
@@ -284,17 +432,34 @@ def post_article():
     title = (request.form.get('title') or '').strip()
     body = (request.form.get('body') or '').strip()
     tags_raw = (request.form.get('tags') or '').strip()
+
+    # タグ数チェック・正規化
+    tags = [t.strip().lower() for t in tags_raw.split(',') if t.strip()]
+    if len(tags) > MAX_TAGS:
+        flash(f'タグは最大 {MAX_TAGS} 個までです。', 'warning')
+        return redirect(url_for('forum'))
+    # タグに禁止語が含まれないか
+    for t in tags:
+        for w in FORBIDDEN_WORDS:
+            if w.lower() in t.lower():
+                flash('タグに不適切な語句が含まれています。', 'warning')
+                return redirect(url_for('forum'))
+    tags_joined = ','.join(tags)
+
     if not body:
         flash('本文は必須です。', 'warning')
         return redirect(url_for('forum'))
 
-    # 正規化: カンマ区切り -> 小文字・空白除去
-    tags = ','.join([t.strip().lower() for t in tags_raw.split(',') if t.strip()])
+    # スパムチェック（記事は長めを許容）
+    is_spam, reason = check_spam_content(body, MAX_ARTICLE_LENGTH)
+    if is_spam:
+        flash(f'投稿を受け付けられません: {reason}', 'warning')
+        return redirect(url_for('forum'))
 
     db = get_db()
     cur = db.cursor()
     cur.execute("INSERT INTO articles (title, body, tags, created_at) VALUES (?, ?, ?, ?)",
-                (title, body, tags, datetime.utcnow().isoformat()))
+                (title, body, tags_joined, datetime.utcnow().isoformat()))
     db.commit()
     flash('記事を投稿しました（匿名）。', 'success')
     return redirect(url_for('forum'))
@@ -331,6 +496,13 @@ def post_comment(article_id):
     if not body:
         flash('コメントを入力してください。', 'warning')
         return redirect(url_for('view_article', article_id=article_id))
+
+    # スパムチェック（短め）
+    is_spam, reason = check_spam_content(body, MAX_COMMENT_LENGTH)
+    if is_spam:
+        flash(f'コメントを受け付けられません: {reason}', 'warning')
+        return redirect(url_for('view_article', article_id=article_id))
+
     db = get_db()
     cur = db.cursor()
     cur.execute("INSERT INTO comments (article_id, body, created_at) VALUES (?, ?, ?)",
@@ -338,6 +510,13 @@ def post_comment(article_id):
     db.commit()
     flash('コメントを投稿しました（匿名）。', 'success')
     return redirect(url_for('view_article', article_id=article_id))
+
+@app.route('/_routes_debug')
+def _routes_debug():
+    out = []
+    for rule in app.url_map.iter_rules():
+        out.append(f"{rule.endpoint} -> {rule.rule} [{','.join(rule.methods)}]")
+    return "<br>".join(sorted(out))
 
 if __name__ == '__main__':
     app.run(debug=True, host='127.0.0.1', port=5000)
