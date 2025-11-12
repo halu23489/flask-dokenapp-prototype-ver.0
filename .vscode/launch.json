@@ -1,0 +1,70 @@
+{
+    // IntelliSense を使用して利用可能な属性を学べます。
+    // 既存の属性の説明をホバーして表示します。
+    // 詳細情報は次を確認してください: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "java",
+            "name": "QuizApp2",
+            "request": "launch",
+            "mainClass": "QuizApp2",
+            "projectName": "Code_937d0848"
+        },
+        {
+            "type": "java",
+            "name": "QuizApp2",
+            "request": "launch",
+            "mainClass": "QuizApp2",
+            "projectName": "Code_937d0848"
+        },
+        {
+            "type": "java",
+            "name": "DWGLineAdder",
+            "request": "launch",
+            "mainClass": "DWGLineAdder",
+            "projectName": "Code_937d0848"
+        },
+        {
+            "type": "java",
+            "name": "heicjpg1",
+            "request": "launch",
+            "mainClass": "heicjpg1",
+            "projectName": "Code_937d0848"
+        },
+        {
+            "type": "java",
+            "name": "xyz2CAD",
+            "request": "launch",
+            "mainClass": "xyz2CAD",
+            "projectName": "Code_937d0848"
+        },
+        {
+            "type": "java",
+            "name": "UnitConversionApp",
+            "request": "launch",
+            "mainClass": "UnitConversionApp",
+            "projectName": "Code_937d0848"
+        },
+        {
+            "type": "java",
+            "name": "CsvToCad",
+            "request": "launch",
+            "mainClass": "CsvToCad",
+            "projectName": "Code_937d0848"
+        },
+        {
+            "type": "java",
+            "name": "Current File",
+            "request": "launch",
+            "mainClass": "${file}"
+        },
+        {
+            "type": "java",
+            "name": "HelloWorld",
+            "request": "launch",
+            "mainClass": "HelloWorld",
+            "projectName": "Code_937d0848"
+        }
+    ]
+}
