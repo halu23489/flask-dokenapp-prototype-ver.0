@@ -1,12 +1,14 @@
-import logging
 import os
 import io
+# zipfileのインポートを追加
+import zipfile
+import logging
 import sqlite3
 from datetime import datetime
 from flask import Flask, render_template, request, redirect, url_for, send_file, flash, g
 from PIL import Image
 import ezdxf
-from io import BytesIO
+from io import StringIO, BytesIO # BytesIOも明示的にインポート
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 import re
@@ -151,9 +153,10 @@ def index():
 def converter_page():
     """HEIC to JPG 変換ページ (GET)"""
     ctx = base_context(current_app='converter', page_title='HEIC to JPG 変換')
+    ctx['HEIF_AVAILABLE'] = HEIF_AVAILABLE # ライブラリが利用可能かテンプレートに渡す
     return render_template('converter.html', **ctx)
 
-# 記事投稿 (既存の関数を流用。重複定義を避けるため、後方にある同名ルートを削除しました)
+# 記事投稿
 @app.route('/post_article', methods=['POST'])
 @limiter.limit("5 per minute") # 投稿系なので制限を強化
 def post_article_submit():
@@ -192,7 +195,7 @@ def post_article_submit():
     flash('記事を投稿しました（匿名）。', 'success')
     return redirect(url_for('forum'))
 
-# コメント投稿 (既存の関数)
+# コメント投稿
 @app.route('/post_comment/<int:article_id>', methods=['POST'])
 @limiter.limit("10 per hour") # コメント投稿も制限を強化
 def post_comment_submit(article_id):
@@ -215,41 +218,83 @@ def post_comment_submit(article_id):
     flash('コメントを投稿しました（匿名）。', 'success')
     return redirect(url_for('view_article', article_id=article_id))
 
-# HEIC変換 (既存の関数)
+# === HEIC変換 (Zip対応に修正) ===
 @app.route('/convert', methods=['POST'])
 @limiter.limit("30 per hour")
 def convert_file():
-    heic = request.files.get('heic_file')
-    if not heic:
-        flash('ファイルを選択してください。', 'warning')
+    
+    # 複数ファイルを取得
+    heic_files = request.files.getlist('heic_file') 
+
+    if not heic_files or all(f.filename == '' for f in heic_files):
+        flash('ファイルが選択されていません。', 'warning')
         return redirect(url_for('converter_page'))
 
     if not HEIF_AVAILABLE:
         flash('サーバーに HEIC を処理するライブラリ(pillow-heif)がインストールされていません。', 'danger')
         return redirect(url_for('converter_page'))
 
-    data = heic.read()
-    try:
-        img = Image.open(io.BytesIO(data))
-    except Exception as e:
-        flash(f'HEIC ファイルの読み込みに失敗しました: {e}', 'danger')
+    # メモリ内でZipファイルを作成
+    zip_buffer = io.BytesIO()
+    
+    # 変換成功したファイル数をカウント
+    converted_count = 0
+    
+    # ZipFileオブジェクトを作成
+    with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zf:
+        # 取得したファイルを一つずつ処理
+        for heic in heic_files:
+            if heic.filename == '' or not heic.filename.lower().endswith(('.heic', '.heif')):
+                continue
+
+            try:
+                # ファイル名を安全なものに（必要であれば）
+                original_name = heic.filename
+                base = os.path.splitext(original_name)[0]
+                # Zip内のファイル名
+                jpg_filename = f'{base}.jpg'
+
+                # メモリ内で変換処理
+                data = heic.read()
+                img = Image.open(io.BytesIO(data))
+                
+                exif = img.info.get('exif', None)
+                rgb = img.convert('RGB')
+                
+                # 個別のJPGをメモリに保存
+                jpg_buffer = io.BytesIO()
+                save_kwargs = {'format': 'JPEG', 'quality': 95}
+                if exif:
+                    save_kwargs['exif'] = exif
+                
+                rgb.save(jpg_buffer, **save_kwargs)
+                jpg_buffer.seek(0)
+                
+                # ZipファイルにJPGデータを書き込む
+                zf.writestr(jpg_filename, jpg_buffer.getvalue())
+                converted_count += 1
+                
+            except Exception as e:
+                # 1つのファイルが失敗しても続行する（ログには残す）
+                logging.warning(f"ファイル '{heic.filename}' の変換に失敗: {e}")
+                pass # エラーのファイルはスキップ
+
+    if converted_count == 0:
+        flash('有効なHEICファイルの変換にすべて失敗しました。', 'danger')
         return redirect(url_for('converter_page'))
 
-    exif = img.info.get('exif', None)
-    rgb = img.convert('RGB')
-    out = io.BytesIO()
-    save_kwargs = {'format': 'JPEG', 'quality': 95}
-    if exif:
-        save_kwargs['exif'] = exif
-    rgb.save(out, **save_kwargs)
-    out.seek(0)
+    zip_buffer.seek(0)
+    
+    # Zipファイルとしてダウンロードさせる
+    flash(f'{converted_count} 件のHEICファイルをJPGに変換しました。', 'success')
+    return send_file(
+        zip_buffer, 
+        mimetype='application/zip', 
+        as_attachment=True, 
+        download_name='Converted_HEIC_Files.zip'
+    )
 
-    original_name = getattr(heic, 'filename', 'image.heic') or 'image.heic'
-    base = os.path.splitext(original_name)[0]
-    download_name = f'{base}.jpg'
-    return send_file(out, mimetype='image/jpeg', as_attachment=True, download_name=download_name)
-
-# 単位換算ページ (既存の関数)
+# === 単位換算アプリのメインページ ===
 @app.route('/unit_converter', methods=['GET', 'POST'])
 def unit_converter_page():
     ctx = base_context(current_app='unit_converter', page_title='単位換算')
@@ -356,7 +401,7 @@ def unit_converter_page():
     ctx['materials'] = MATERIALS
     return render_template('unit_converter.html', **ctx)
 
-# DXF座標出力ツール (既存の関数)
+# DXF座標出力ツール
 @app.route('/dxf_tool')
 def dxf_tool_page():
     ctx = base_context(current_app='dxf_tool', page_title='DXF座標出力ツール')
@@ -377,13 +422,10 @@ def generate_dxf():
         line = raw_line.strip()
         if not line:
             continue
-        # カンマ区切り優先、スペース区切りも許容
         parts = [p.strip() for p in line.split(',') if p.strip()]
         if len(parts) == 1:
-            # 1要素のみは無視
             continue
         if len(parts) == 2:
-            # x,y のみ
             label = ''
             try:
                 x = float(parts[0])
@@ -391,13 +433,11 @@ def generate_dxf():
             except Exception:
                 continue
         else:
-            # label, x, y （ラベルにカンマを含む場合最後2つを座標とみなす）
             try:
                 x = float(parts[-2])
                 y = float(parts[-1])
                 label = ','.join(parts[:-2])
             except Exception:
-                # 解析できなければスキップ
                 continue
         points.append({'label': label, 'x': x, 'y': y})
 
@@ -407,16 +447,13 @@ def generate_dxf():
 
     try:
         doc = ezdxf.new(dxfversion='R2010')
-        # レイヤー作成（存在しなければ）
         if layer_name not in doc.layers:
             doc.layers.new(name=layer_name)
         msp = doc.modelspace()
 
         for pt in points:
             x, y = pt['x'], pt['y']
-            # 点を追加
             msp.add_point((x, y), dxfattribs={'layer': layer_name})
-            # ラベルがあれば小さめのテキストを追加（右上に少しずらす）
             if pt['label']:
                 txt = msp.add_text(str(pt['label']), dxfattribs={'height': 0.25, 'layer': layer_name})
                 txt.set_pos((x + 0.2, y + 0.2), align='LEFT')
@@ -430,19 +467,19 @@ def generate_dxf():
         flash(f'DXF 生成に失敗しました: {e}', 'danger')
         return redirect(url_for('dxf_tool_page'))
 
-# 計算ツール (既存の関数)
+# 計算ツール
 @app.route('/calculator')
 def calculator():
     ctx = base_context(current_app='calculator', page_title='計算ツール')
     return render_template('calc.html', **ctx)
 
-# 比較見積もりツール (既存の関数)
+# 比較見積もりツール
 @app.route('/comparison_tool')
 def comparison_tool_page():
     ctx = base_context(current_app='comparison_tool', page_title='比較見積もりツール')
     return render_template('comparison_tool.html', **ctx)
 
-# --- フォーラム（記事一覧・投稿・詳細・コメント） ---
+# --- フォーラム ---
 @app.route('/forum', methods=['GET'])
 def forum():
     tag = request.args.get('tag', '').strip().lower()
@@ -455,13 +492,13 @@ def forum():
         cur.execute("SELECT * FROM articles ORDER BY created_at DESC")
     articles = cur.fetchall()
     ctx = base_context(current_app='forum', page_title='知恵袋・掲示板')
-    # tagsをリストに変換するヘルパー関数
+    
     def get_tag_list(tags_str):
         return [t.strip() for t in (tags_str or '').split(',') if t.strip()]
     
     return render_template('forum.html', articles=articles, tag=tag, get_tag_list=get_tag_list, **ctx)
 
-# 記事詳細 (既存の関数)
+# 記事詳細
 @app.route('/article/<int:article_id>', methods=['GET'])
 def view_article(article_id):
     db = get_db()
@@ -472,19 +509,15 @@ def view_article(article_id):
         flash('記事が見つかりません。', 'warning')
         return redirect(url_for('forum'))
 
-    # コメント取得
     cur.execute("SELECT * FROM comments WHERE article_id = ? ORDER BY created_at ASC", (article_id,))
     comments = cur.fetchall()
 
-    # 類似記事（同じタグを1つでも持つもの、最大6件）
     similar = []
     if article['tags']:
         tags = [t.strip() for t in article['tags'].split(',') if t.strip()]
-        q_like = ' OR '.join(['lower(tags) LIKE ?' for _ in tags])
-        params = [f'%{t}%' for t in tags]
-        # SQL の INJECTION 対策は、SQLite の LIKE クエリとプレースホルダーで対処。
-        # ただし、tags が空の場合はクエリが不正になるため、tagsの存在チェックを強化。
         if tags:
+            q_like = ' OR '.join(['lower(tags) LIKE ?' for _ in tags])
+            params = [f'%{t}%' for t in tags]
             cur.execute(f"SELECT * FROM articles WHERE ({q_like}) AND id != ? ORDER BY created_at DESC LIMIT 6", (*params, article_id))
             similar = cur.fetchall()
 
@@ -494,11 +527,6 @@ def view_article(article_id):
     ctx = base_context(current_app='forum', page_title=article['title'] or '記事')
     return render_template('article.html', article=article, comments=comments, similar=similar, get_tag_list=get_tag_list, **ctx)
 
-# コメント投稿 (既存の関数。重複定義を避けるため、post_comment_submitと統合)
-# このルーティングは post_comment_submit で定義済みのため削除
-# @app.route('/post_comment/<int:article_id>', methods=['POST'])
-# def post_comment(article_id):
-#     ... (削除)
 
 @app.route('/_routes_debug')
 def _routes_debug():
@@ -508,5 +536,4 @@ def _routes_debug():
     return "<br>".join(sorted(out))
 
 if __name__ == '__main__':
-    # 開発環境で実行する場合
     app.run(debug=True, host='127.0.0.1', port=5000)
