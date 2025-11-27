@@ -247,8 +247,15 @@
 
             <ul class="nav flex-column">
                 {% for key, item in nav.items() %}
+                    {% set is_external = item.get('external', False) %}
                     {% set children = item.get('children', []) %}
-                    {% if children %}
+                    {% if is_external %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ item['url'] }}" target="_blank" rel="noopener noreferrer">
+                                {{ item['name'] }} <i class="bi bi-box-arrow-up-right ms-1"></i>
+                            </a>
+                        </li>
+                    {% elif children %}
                         {% set is_open = false %}
                         {% for c in children %}
                             {% if c['id'] == current_app %}

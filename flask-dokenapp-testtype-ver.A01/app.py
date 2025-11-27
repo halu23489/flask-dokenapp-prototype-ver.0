@@ -14,6 +14,7 @@ APP_CONFIG = {
         'home': {'name': '🏠 ホーム', 'url': 'index'},
         'record': {'name': '📝 日々の作業記録', 'url': 'daily_record'},
         'stopwatch': {'name': '⏱ サイクルタイム計測', 'url': 'stopwatch'},
+        'external_app': {'name': '🔗 現場の便利ツール ショクチョー！アプリ', 'url': 'https://flask-dokenapp-prototype-ver-0.onrender.com/', 'external': True},
         'others': {
             'name': '📊 その他機能（予定）',
             'children': [
