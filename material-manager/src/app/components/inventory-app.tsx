@@ -394,13 +394,13 @@ export default function InventoryApp({ initialSnapshot }: Props) {
                 </div>
 
                 <div className="inventory-report table-responsive rounded-3 border">
-                  <table className="inventory-table inventory-table-large table table-hover align-middle mb-0">
+                  <table className="inventory-table inventory-table-large inventory-table-mobile-fit table table-hover align-middle mb-0">
                     <thead className="table-light">
                       <tr>
                         <th>資材名</th>
                         <th>在庫</th>
                         <th>閾値</th>
-                        <th style={{ minWidth: 320 }}>出し入れ</th>
+                        <th className="inventory-main-actions-col">出し入れ</th>
                       </tr>
                     </thead>
                     <tbody>
