@@ -45,6 +45,10 @@ function downloadBlob(blob: Blob, fileName: string) {
   URL.revokeObjectURL(url);
 }
 
+async function waitForNextFrame() {
+  await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+}
+
 export default function InventoryApp({ initialSnapshot }: Props) {
   const [snapshot, setSnapshot] = useState(initialSnapshot);
   const [actor, setActor] = useState("現場担当者");
@@ -260,16 +264,53 @@ export default function InventoryApp({ initialSnapshot }: Props) {
     return response.blob();
   }
 
-  async function handleExport() {
-    if (exportFormat === "image") {
-      if (!reportRef.current) {
-        return;
-      }
+  async function createImageExportBlob() {
+    if (!reportRef.current) {
+      throw new Error("画像出力対象が見つかりません。");
+    }
 
-      const blob = await toBlob(reportRef.current, { pixelRatio: 2.5, cacheBust: true });
+    if ("fonts" in document) {
+      await document.fonts.ready;
+    }
+
+    const exportNode = reportRef.current.cloneNode(true) as HTMLDivElement;
+    exportNode.setAttribute("aria-hidden", "false");
+    exportNode.style.position = "fixed";
+    exportNode.style.left = "0";
+    exportNode.style.top = "0";
+    exportNode.style.width = "900px";
+    exportNode.style.padding = "24px";
+    exportNode.style.background = "#ffffff";
+    exportNode.style.opacity = "1";
+    exportNode.style.pointerEvents = "none";
+    exportNode.style.zIndex = "-1";
+    exportNode.style.transform = "none";
+
+    document.body.appendChild(exportNode);
+
+    try {
+      await waitForNextFrame();
+      await waitForNextFrame();
+
+      const blob = await toBlob(exportNode, {
+        pixelRatio: 2.5,
+        cacheBust: true,
+        backgroundColor: "#ffffff",
+      });
+
       if (!blob) {
         throw new Error("画像出力に失敗しました。");
       }
+
+      return blob;
+    } finally {
+      exportNode.remove();
+    }
+  }
+
+  async function handleExport() {
+    if (exportFormat === "image") {
+      const blob = await createImageExportBlob();
 
       downloadBlob(blob, buildInventoryFileName("png"));
       setStatusMessage("画像を書き出しました。");
@@ -288,14 +329,7 @@ export default function InventoryApp({ initialSnapshot }: Props) {
     }
 
     if (exportFormat === "image") {
-      if (!reportRef.current) {
-        return;
-      }
-
-      const blob = await toBlob(reportRef.current, { pixelRatio: 2.5, cacheBust: true });
-      if (!blob) {
-        throw new Error("画像共有に失敗しました。");
-      }
+      const blob = await createImageExportBlob();
 
       const file = new File([blob], buildInventoryFileName("png"), { type: "image/png" });
       await navigator.share({
