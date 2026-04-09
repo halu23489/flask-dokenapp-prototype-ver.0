@@ -29,6 +29,25 @@ const dateFormatter = new Intl.DateTimeFormat("ja-JP", {
   minute: "2-digit",
 });
 
+function normalizeNumericText(value: string) {
+  return value
+    .replace(/[０-９]/g, (char) => String.fromCharCode(char.charCodeAt(0) - 0xfee0))
+    .replace(/[‐‑‒–—―ー]/g, "-")
+    .replace(/[，、]/g, ",")
+    .replace(/\s+/g, "")
+    .replace(/,/g, "");
+}
+
+function parsePositiveInteger(value: string) {
+  const normalized = normalizeNumericText(value);
+
+  if (!normalized) {
+    return NaN;
+  }
+
+  return Math.trunc(Number(normalized));
+}
+
 function parseEmails(value: string): string[] {
   return value
     .split(",")
@@ -147,7 +166,12 @@ export default function InventoryApp({ initialSnapshot }: Props) {
 
   function handleAdjust(materialId: string, direction: 1 | -1) {
     const rawAmount = pendingAmounts[materialId] ?? "1";
-    const amount = Math.max(1, Number(rawAmount || 1));
+    const amount = parsePositiveInteger(rawAmount);
+
+    if (!Number.isFinite(amount) || amount < 1) {
+      setStatusMessage("増減数は1以上で指定してください。");
+      return;
+    }
 
     startTransition(() => {
       void mutateInventory({
@@ -162,6 +186,13 @@ export default function InventoryApp({ initialSnapshot }: Props) {
         setStatusMessage(error.message);
       });
     });
+  }
+
+  function updatePendingAmount(materialId: string, nextValue: string) {
+    setPendingAmounts((current) => ({
+      ...current,
+      [materialId]: nextValue,
+    }));
   }
 
   function handleCreateMaterial(event: React.FormEvent<HTMLFormElement>) {
@@ -461,14 +492,17 @@ export default function InventoryApp({ initialSnapshot }: Props) {
                               <div className="d-grid gap-2">
                                 <div className="inventory-action-row d-grid gap-2 gap-xl-3">
                                   <input
+                                    type="tel"
                                     inputMode="numeric"
+                                    pattern="[0-9０-９]*"
+                                    enterKeyHint="done"
                                     value={pendingAmounts[material.id] ?? "1"}
-                                    onChange={(event) =>
-                                      setPendingAmounts((current) => ({
-                                        ...current,
-                                        [material.id]: event.target.value,
-                                      }))
-                                    }
+                                    onInput={(event) => updatePendingAmount(material.id, event.currentTarget.value)}
+                                    onChange={(event) => updatePendingAmount(material.id, event.target.value)}
+                                    onBlur={(event) => {
+                                      const normalized = normalizeNumericText(event.target.value);
+                                      updatePendingAmount(material.id, normalized || "1");
+                                    }}
                                     className="form-control form-control-lg inventory-amount-input"
                                   />
                                   <button type="button" onClick={() => handleAdjust(material.id, 1)} className="btn btn-primary btn-lg inventory-action-button">

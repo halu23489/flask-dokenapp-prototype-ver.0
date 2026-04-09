@@ -16,6 +16,25 @@ import {
 
 export const runtime = "nodejs";
 
+function normalizeNumericValue(value: unknown) {
+  if (typeof value === "number") {
+    return value;
+  }
+
+  if (typeof value !== "string") {
+    return Number(value ?? 0);
+  }
+
+  const normalized = value
+    .replace(/[０-９]/g, (char) => String.fromCharCode(char.charCodeAt(0) - 0xfee0))
+    .replace(/[‐‑‒–—―ー]/g, "-")
+    .replace(/[，、]/g, ",")
+    .replace(/\s+/g, "")
+    .replace(/,/g, "");
+
+  return Number(normalized || 0);
+}
+
 export async function POST(request: Request) {
   try {
     const body = (await request.json()) as {
@@ -35,11 +54,11 @@ export async function POST(request: Request) {
         category: String(body.payload.category ?? ""),
         location: String(body.payload.location ?? ""),
         unit: String(body.payload.unit ?? "個"),
-        quantity: Number(body.payload.quantity ?? 0),
+        quantity: normalizeNumericValue(body.payload.quantity),
         threshold:
           body.payload.threshold === null || body.payload.threshold === ""
             ? null
-            : Number(body.payload.threshold),
+            : normalizeNumericValue(body.payload.threshold),
         notes: String(body.payload.notes ?? ""),
       });
 
@@ -49,7 +68,7 @@ export async function POST(request: Request) {
     if (body.action === "adjust") {
       const result = await adjustMaterial({
         id: String(body.payload.id ?? ""),
-        delta: Number(body.payload.delta ?? 0),
+        delta: normalizeNumericValue(body.payload.delta),
         actor: String(body.payload.actor ?? ""),
         note: String(body.payload.note ?? ""),
       });
@@ -80,7 +99,7 @@ export async function POST(request: Request) {
         threshold:
           body.payload.threshold === null || body.payload.threshold === ""
             ? null
-            : Number(body.payload.threshold),
+            : normalizeNumericValue(body.payload.threshold),
       });
 
       return NextResponse.json({
