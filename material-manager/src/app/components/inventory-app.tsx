@@ -9,7 +9,6 @@ import {
   useState,
   useTransition,
 } from "react";
-import { toBlob } from "html-to-image";
 
 import { buildInventoryFileName } from "../../lib/inventory-file-name";
 import type { GlobalNotificationSettings, InventorySnapshot, Material } from "../../lib/types";
@@ -66,6 +65,116 @@ function downloadBlob(blob: Blob, fileName: string) {
 
 async function waitForNextFrame() {
   await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+}
+
+function blobFromCanvas(canvas: HTMLCanvasElement) {
+  return new Promise<Blob>((resolve, reject) => {
+    canvas.toBlob((blob) => {
+      if (!blob) {
+        reject(new Error("画像出力に失敗しました。"));
+        return;
+      }
+
+      resolve(blob);
+    }, "image/png");
+  });
+}
+
+function createInventoryImageBlob(snapshot: InventorySnapshot) {
+  const paddingX = 48;
+  const topPadding = 40;
+  const bottomPadding = 40;
+  const titleHeight = 42;
+  const subtitleHeight = 34;
+  const headerHeight = 44;
+  const rowHeight = 38;
+  const tableTop = topPadding + titleHeight + subtitleHeight + 24;
+  const tableWidth = 1104;
+  const canvasWidth = 1200;
+  const nameColumnWidth = 760;
+  const qtyColumnWidth = tableWidth - nameColumnWidth;
+  const rowCount = Math.max(snapshot.materials.length, 1);
+  const canvasHeight = tableTop + headerHeight + rowHeight * rowCount + bottomPadding;
+
+  const canvas = document.createElement("canvas");
+  canvas.width = canvasWidth;
+  canvas.height = canvasHeight;
+
+  const context = canvas.getContext("2d");
+
+  if (!context) {
+    throw new Error("画像描画の初期化に失敗しました。");
+  }
+
+  context.fillStyle = "#ffffff";
+  context.fillRect(0, 0, canvas.width, canvas.height);
+
+  context.fillStyle = "#111827";
+  context.textBaseline = "middle";
+
+  context.font = '700 34px "Noto Sans JP", sans-serif';
+  context.fillText("松戸ヤード資材数量表", paddingX, topPadding + titleHeight / 2);
+
+  context.fillStyle = "#4b5563";
+  context.font = '400 20px "Noto Sans JP", sans-serif';
+  context.fillText(
+    `出力日時 ${dateFormatter.format(new Date(snapshot.lastUpdatedAt))}`,
+    paddingX,
+    topPadding + titleHeight + subtitleHeight / 2,
+  );
+
+  context.strokeStyle = "#cbd5e1";
+  context.lineWidth = 2;
+  context.strokeRect(paddingX, tableTop, tableWidth, headerHeight + rowHeight * rowCount);
+
+  context.fillStyle = "#eef2f7";
+  context.fillRect(paddingX, tableTop, tableWidth, headerHeight);
+
+  context.strokeStyle = "#cbd5e1";
+  context.beginPath();
+  context.moveTo(paddingX + nameColumnWidth, tableTop);
+  context.lineTo(paddingX + nameColumnWidth, tableTop + headerHeight + rowHeight * rowCount);
+  context.stroke();
+
+  context.fillStyle = "#111827";
+  context.font = '700 20px "Noto Sans JP", sans-serif';
+  context.fillText("資材名", paddingX + 16, tableTop + headerHeight / 2);
+  context.fillText("在庫数量", paddingX + nameColumnWidth + 16, tableTop + headerHeight / 2);
+
+  context.font = '400 20px "Noto Sans JP", sans-serif';
+
+  const materials =
+    snapshot.materials.length > 0
+      ? snapshot.materials
+      : [{ id: "empty", name: "資材データなし", quantity: 0, unit: "", notes: "" }];
+
+  materials.forEach((material, index) => {
+    const y = tableTop + headerHeight + rowHeight * index;
+
+    if (index % 2 === 0) {
+      context.fillStyle = "#ffffff";
+    } else {
+      context.fillStyle = "#f8fafc";
+    }
+
+    context.fillRect(paddingX, y, tableWidth, rowHeight);
+
+    context.strokeStyle = "#e5e7eb";
+    context.beginPath();
+    context.moveTo(paddingX, y + rowHeight);
+    context.lineTo(paddingX + tableWidth, y + rowHeight);
+    context.stroke();
+
+    context.fillStyle = "#111827";
+    context.fillText(String(material.name), paddingX + 16, y + rowHeight / 2);
+    context.fillText(
+      `${numberFormatter.format(Number(material.quantity ?? 0))}${String(material.unit ?? "")}`,
+      paddingX + nameColumnWidth + 16,
+      y + rowHeight / 2,
+    );
+  });
+
+  return blobFromCanvas(canvas);
 }
 
 export default function InventoryApp({ initialSnapshot }: Props) {
@@ -296,47 +405,12 @@ export default function InventoryApp({ initialSnapshot }: Props) {
   }
 
   async function createImageExportBlob() {
-    if (!reportRef.current) {
-      throw new Error("画像出力対象が見つかりません。");
-    }
-
     if ("fonts" in document) {
       await document.fonts.ready;
     }
 
-    const exportNode = reportRef.current.cloneNode(true) as HTMLDivElement;
-    exportNode.setAttribute("aria-hidden", "false");
-    exportNode.style.position = "fixed";
-    exportNode.style.left = "0";
-    exportNode.style.top = "0";
-    exportNode.style.width = "900px";
-    exportNode.style.padding = "24px";
-    exportNode.style.background = "#ffffff";
-    exportNode.style.opacity = "1";
-    exportNode.style.pointerEvents = "none";
-    exportNode.style.zIndex = "-1";
-    exportNode.style.transform = "none";
-
-    document.body.appendChild(exportNode);
-
-    try {
-      await waitForNextFrame();
-      await waitForNextFrame();
-
-      const blob = await toBlob(exportNode, {
-        pixelRatio: 2.5,
-        cacheBust: true,
-        backgroundColor: "#ffffff",
-      });
-
-      if (!blob) {
-        throw new Error("画像出力に失敗しました。");
-      }
-
-      return blob;
-    } finally {
-      exportNode.remove();
-    }
+    await waitForNextFrame();
+    return createInventoryImageBlob(snapshot);
   }
 
   async function handleExport() {
