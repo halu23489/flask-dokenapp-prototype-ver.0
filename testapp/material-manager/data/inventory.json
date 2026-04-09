@@ -1,0 +1,235 @@
+{
+  "materials": [
+    {
+      "id": "bc2e58c5-1d8d-4e5c-b0be-3e8177e64ac2",
+      "name": "H200*4ｍ",
+      "category": "未分類",
+      "location": "棚未設定",
+      "unit": "本",
+      "quantity": 20,
+      "threshold": 10,
+      "notes": "",
+      "createdAt": "2026-04-09T07:29:23.308Z",
+      "updatedAt": "2026-04-09T07:29:23.308Z",
+      "lastAlertAt": null,
+      "lastAlertQuantity": null
+    },
+    {
+      "id": "ee80ef1d-e27f-4947-9c17-baf16502ed7e",
+      "name": "H200*6m",
+      "category": "未分類",
+      "location": "棚未設定",
+      "unit": "本",
+      "quantity": 10,
+      "threshold": 5,
+      "notes": "",
+      "createdAt": "2026-04-09T04:01:51.655Z",
+      "updatedAt": "2026-04-09T04:01:51.655Z",
+      "lastAlertAt": null,
+      "lastAlertQuantity": null
+    },
+    {
+      "id": "62fd4a0d-27cd-4351-8399-138a73f495cf",
+      "name": "M10ボルト",
+      "category": "締結材",
+      "location": "A-01",
+      "unit": "本",
+      "quantity": 100,
+      "threshold": 50,
+      "notes": "標準在庫",
+      "createdAt": "2026-04-09T01:47:22.603Z",
+      "updatedAt": "2026-04-09T04:09:12.125Z",
+      "lastAlertAt": null,
+      "lastAlertQuantity": null
+    }
+  ],
+  "additionLogs": [
+    {
+      "id": "ae9f56da-3be1-4c59-b014-bac6a8cf9dae",
+      "materialId": "62fd4a0d-27cd-4351-8399-138a73f495cf",
+      "materialName": "M10ボルト",
+      "kind": "addition",
+      "quantity": 100,
+      "actor": "現場担当者",
+      "note": "",
+      "createdAt": "2026-04-09T04:09:12.125Z",
+      "resultingQuantity": 100
+    },
+    {
+      "id": "16b9c957-b1a7-46d1-adf5-d1fda7df9617",
+      "materialId": "9825098e-d549-4124-a787-c12248434a0c",
+      "materialName": "コンクリートアンカー",
+      "kind": "addition",
+      "quantity": 1,
+      "actor": "現場担当者",
+      "note": "",
+      "createdAt": "2026-04-09T03:21:40.291Z",
+      "resultingQuantity": 6
+    },
+    {
+      "id": "06c297ae-5d99-4b25-920f-e7381da8f8da",
+      "materialId": "9825098e-d549-4124-a787-c12248434a0c",
+      "materialName": "コンクリートアンカー",
+      "kind": "addition",
+      "quantity": 1,
+      "actor": "現場担当者",
+      "note": "",
+      "createdAt": "2026-04-09T03:21:39.145Z",
+      "resultingQuantity": 5
+    },
+    {
+      "id": "06e90e9f-9feb-4e0b-9126-1504a99d1cbb",
+      "materialId": "62fd4a0d-27cd-4351-8399-138a73f495cf",
+      "materialName": "M10ボルト",
+      "kind": "addition",
+      "quantity": 50,
+      "actor": "現場担当者",
+      "note": "",
+      "createdAt": "2026-04-09T03:21:15.056Z",
+      "resultingQuantity": 68
+    },
+    {
+      "id": "f3b84542-5e0a-4613-a9bb-f637857cc8fb",
+      "materialId": "62fd4a0d-27cd-4351-8399-138a73f495cf",
+      "materialName": "M10ボルト",
+      "kind": "addition",
+      "quantity": 1,
+      "actor": "現場担当者",
+      "note": "",
+      "createdAt": "2026-04-09T03:21:05.397Z",
+      "resultingQuantity": 18
+    },
+    {
+      "id": "e617ad20-6931-4a91-8952-0916c222c66a",
+      "materialId": "62fd4a0d-27cd-4351-8399-138a73f495cf",
+      "materialName": "M10ボルト",
+      "kind": "addition",
+      "quantity": 1,
+      "actor": "現場担当者",
+      "note": "",
+      "createdAt": "2026-04-09T01:57:36.183Z",
+      "resultingQuantity": 184
+    },
+    {
+      "id": "5f612948-2c7f-4efe-866a-81e5c2c3e5fb",
+      "materialId": "62fd4a0d-27cd-4351-8399-138a73f495cf",
+      "materialName": "M10ボルト",
+      "kind": "addition",
+      "quantity": 1,
+      "actor": "現場担当者",
+      "note": "",
+      "createdAt": "2026-04-09T01:57:35.972Z",
+      "resultingQuantity": 183
+    },
+    {
+      "id": "8510c890-7c05-4ad0-96a2-e0ae81068193",
+      "materialId": "62fd4a0d-27cd-4351-8399-138a73f495cf",
+      "materialName": "M10ボルト",
+      "kind": "addition",
+      "quantity": 1,
+      "actor": "現場担当者",
+      "note": "",
+      "createdAt": "2026-04-09T01:57:35.536Z",
+      "resultingQuantity": 182
+    },
+    {
+      "id": "3bb9a417-9677-4b06-92ef-b00dcd5c86ff",
+      "materialId": "62fd4a0d-27cd-4351-8399-138a73f495cf",
+      "materialName": "M10ボルト",
+      "kind": "addition",
+      "quantity": 1,
+      "actor": "現場担当者",
+      "note": "",
+      "createdAt": "2026-04-09T01:57:33.288Z",
+      "resultingQuantity": 181
+    }
+  ],
+  "usageLogs": [
+    {
+      "id": "b1ed961a-8253-4cc4-b31a-7c95f2e05990",
+      "materialId": "62fd4a0d-27cd-4351-8399-138a73f495cf",
+      "materialName": "M10ボルト",
+      "kind": "usage",
+      "quantity": 38,
+      "actor": "現場担当者",
+      "note": "",
+      "createdAt": "2026-04-09T03:23:04.876Z",
+      "resultingQuantity": 0
+    },
+    {
+      "id": "a2ccd92f-1599-4d0b-bbb0-4cfa324006e8",
+      "materialId": "62fd4a0d-27cd-4351-8399-138a73f495cf",
+      "materialName": "M10ボルト",
+      "kind": "usage",
+      "quantity": 30,
+      "actor": "現場担当者",
+      "note": "",
+      "createdAt": "2026-04-09T03:21:23.231Z",
+      "resultingQuantity": 38
+    },
+    {
+      "id": "d0131aee-a41b-4882-b01b-841222564d66",
+      "materialId": "9825098e-d549-4124-a787-c12248434a0c",
+      "materialName": "コンクリートアンカー",
+      "kind": "usage",
+      "quantity": 10,
+      "actor": "現場担当者",
+      "note": "",
+      "createdAt": "2026-04-09T03:01:56.158Z",
+      "resultingQuantity": 4
+    },
+    {
+      "id": "00ead783-3053-4863-8d11-6a6aa91191b9",
+      "materialId": "62fd4a0d-27cd-4351-8399-138a73f495cf",
+      "materialName": "M10ボルト",
+      "kind": "usage",
+      "quantity": 160,
+      "actor": "現場担当者",
+      "note": "",
+      "createdAt": "2026-04-09T03:00:11.507Z",
+      "resultingQuantity": 17
+    },
+    {
+      "id": "8506f614-23b5-49c7-a4c0-6272028d94d5",
+      "materialId": "62fd4a0d-27cd-4351-8399-138a73f495cf",
+      "materialName": "M10ボルト",
+      "kind": "usage",
+      "quantity": 5,
+      "actor": "現場担当者",
+      "note": "",
+      "createdAt": "2026-04-09T01:57:40.874Z",
+      "resultingQuantity": 177
+    },
+    {
+      "id": "4e69c357-e393-4b43-96f7-584215b8dc0d",
+      "materialId": "62fd4a0d-27cd-4351-8399-138a73f495cf",
+      "materialName": "M10ボルト",
+      "kind": "usage",
+      "quantity": 1,
+      "actor": "現場担当者",
+      "note": "",
+      "createdAt": "2026-04-09T01:57:37.533Z",
+      "resultingQuantity": 182
+    },
+    {
+      "id": "62da4170-387d-45bd-8a8c-002f3ed754a5",
+      "materialId": "62fd4a0d-27cd-4351-8399-138a73f495cf",
+      "materialName": "M10ボルト",
+      "kind": "usage",
+      "quantity": 1,
+      "actor": "現場担当者",
+      "note": "",
+      "createdAt": "2026-04-09T01:57:37.381Z",
+      "resultingQuantity": 183
+    }
+  ],
+  "notificationSettings": {
+    "emailEnabled": true,
+    "commonEmails": [
+      "ooihrk00@pub.taisei.co.jp"
+    ],
+    "lineWorksEnabled": false,
+    "lineWorksWebhookUrl": ""
+  },
+  "lastUpdatedAt": "2026-04-09T07:29:23.309Z"
+}
