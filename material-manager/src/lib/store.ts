@@ -17,7 +17,10 @@ import type {
   UpdateGlobalNotificationInput,
 } from "./types";
 
-const dataFilePath = path.join(process.cwd(), "data", "inventory.json");
+const bundledDataFilePath = path.join(process.cwd(), "data", "inventory.json");
+const localDataFilePath = process.env.VERCEL
+  ? path.join("/tmp", "material-manager", "inventory.json")
+  : bundledDataFilePath;
 const inventoryStateId = 1;
 const hasPostgresConfig = Boolean(
   process.env.POSTGRES_URL ||
@@ -175,16 +178,17 @@ async function ensureStore(): Promise<void> {
   }
 
   try {
-    await fs.access(dataFilePath);
+    await fs.access(localDataFilePath);
   } catch {
-    await fs.mkdir(path.dirname(dataFilePath), { recursive: true });
-    await fs.writeFile(dataFilePath, JSON.stringify(defaultData(), null, 2), "utf8");
+    const seed = (await readLocalSeedData()) ?? defaultData();
+    await fs.mkdir(path.dirname(localDataFilePath), { recursive: true });
+    await fs.writeFile(localDataFilePath, JSON.stringify(seed, null, 2), "utf8");
   }
 }
 
 async function readLocalSeedData(): Promise<InventoryData | null> {
   try {
-    const content = await fs.readFile(dataFilePath, "utf8");
+    const content = await fs.readFile(bundledDataFilePath, "utf8");
     const parsed = JSON.parse(content) as Partial<InventoryData>;
     const normalized = normalizeInventoryData(parsed);
 
@@ -254,7 +258,7 @@ async function readStore(): Promise<InventoryData> {
   }
 
   await ensureStore();
-  const content = await fs.readFile(dataFilePath, "utf8");
+  const content = await fs.readFile(localDataFilePath, "utf8");
   const parsed = JSON.parse(content) as Partial<InventoryData>;
 
   return normalizeInventoryData(parsed);
@@ -277,7 +281,7 @@ async function writeStore(data: InventoryData): Promise<void> {
   }
 
   await fs.writeFile(
-    dataFilePath,
+    localDataFilePath,
     JSON.stringify(nextData, null, 2),
     "utf8",
   );
