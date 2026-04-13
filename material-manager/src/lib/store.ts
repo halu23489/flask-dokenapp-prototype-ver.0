@@ -34,7 +34,7 @@ let postgresReadyPromise: Promise<void> | null = null;
 
 const now = () => new Date().toISOString();
 
-async function runSql<T = unknown>(
+async function runSql<T = Record<string, unknown>>(
   strings: TemplateStringsArray,
   ...values: unknown[]
 ): Promise<{ rows: T[]; rowCount: number }> {
@@ -46,9 +46,9 @@ async function runSql<T = unknown>(
 
   await client.connect();
   try {
-    const result = await client.sql<T>(strings, ...(values as []));
+    const result = await client.sql(strings, ...(values as []));
     return {
-      rows: result.rows,
+      rows: result.rows as T[],
       rowCount: result.rowCount ?? 0,
     };
   } finally {
