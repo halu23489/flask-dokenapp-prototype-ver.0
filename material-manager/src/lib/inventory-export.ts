@@ -26,9 +26,8 @@ export function buildInventoryWorkbookBuffer(snapshot: InventorySnapshot) {
 
 async function loadJapaneseFontBytes() {
   const candidatePaths = [
-    path.join("C:", "Windows", "Fonts", "msgothic.ttc"),
     path.join(
-      process.cwd(),
+      /* turbopackIgnore: true */ process.cwd(),
       "node_modules",
       "@fontsource",
       "noto-sans-jp",
@@ -36,6 +35,10 @@ async function loadJapaneseFontBytes() {
       "noto-sans-jp-japanese-400-normal.woff",
     ),
   ];
+
+  if (process.platform === "win32") {
+    candidatePaths.unshift(path.join("C:", "Windows", "Fonts", "msgothic.ttc"));
+  }
 
   for (const fontPath of candidatePaths) {
     try {

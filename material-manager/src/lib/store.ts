@@ -46,9 +46,20 @@ async function runSql<T = Record<string, unknown>>(
 
   await client.connect();
   try {
-    const result = await client.sql(strings, ...(values as []));
+    // テンプレートリテラルのパーツからパラメータ化クエリを構築する。
+    // client.sql<T>() の generic 制約 (QueryResultRow) を完全に回避するため
+    // 基底クラス pg.Client の query() を直接呼ぶ。
+    const text = strings.reduce(
+      (acc, part, i) => acc + part + (i < values.length ? `$${i + 1}` : ""),
+      ""
+    );
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const result = await (client as any).query(text, values) as {
+      rows: unknown[];
+      rowCount: number | null;
+    };
     return {
-      rows: result.rows as T[],
+      rows: (result.rows ?? []) as T[],
       rowCount: result.rowCount ?? 0,
     };
   } finally {
