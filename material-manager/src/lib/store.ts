@@ -3,7 +3,7 @@ import "server-only";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 
-import { createClient, sql } from "@vercel/postgres";
+import { createClient } from "@vercel/postgres";
 
 import type {
   AdjustMaterialInput,
@@ -25,14 +25,9 @@ const inventoryStateId = 1;
 const postgresUrl = process.env.POSTGRES_URL?.trim();
 const nonPoolingUrl = process.env.POSTGRES_URL_NON_POOLING?.trim();
 const prismaUrl = process.env.POSTGRES_PRISMA_URL?.trim();
-const looksLikeSupabaseDirectUrl = Boolean(
-  postgresUrl &&
-    (postgresUrl.includes(":5432/") || /@db\.[a-z0-9]+\.supabase\.co(?::\d+)?\//i.test(postgresUrl)),
-);
-const pooledConnectionString = looksLikeSupabaseDirectUrl ? "" : (postgresUrl ?? "");
-const directConnectionString = nonPoolingUrl || prismaUrl || (looksLikeSupabaseDirectUrl ? (postgresUrl ?? "") : "");
+const directConnectionString = nonPoolingUrl || prismaUrl || postgresUrl || "";
 const hasPostgresConfig = Boolean(
-  pooledConnectionString || directConnectionString,
+  directConnectionString,
 );
 
 let postgresReadyPromise: Promise<void> | null = null;
@@ -43,14 +38,6 @@ async function runSql<T = unknown>(
   strings: TemplateStringsArray,
   ...values: unknown[]
 ): Promise<{ rows: T[]; rowCount: number }> {
-  if (pooledConnectionString) {
-    const result = await sql<T>(strings, ...(values as []));
-    return {
-      rows: result.rows,
-      rowCount: result.rowCount ?? 0,
-    };
-  }
-
   if (!directConnectionString) {
     throw new Error("PostgreSQL接続文字列が未設定です。");
   }
