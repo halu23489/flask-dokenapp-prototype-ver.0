@@ -3,7 +3,7 @@ import "server-only";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 
-import { sql } from "@vercel/postgres";
+import { createClient, sql } from "@vercel/postgres";
 
 import type {
   AdjustMaterialInput,
@@ -22,15 +22,52 @@ const localDataFilePath = process.env.VERCEL
   ? path.join("/tmp", "material-manager", "inventory.json")
   : bundledDataFilePath;
 const inventoryStateId = 1;
+const postgresUrl = process.env.POSTGRES_URL?.trim();
+const nonPoolingUrl = process.env.POSTGRES_URL_NON_POOLING?.trim();
+const prismaUrl = process.env.POSTGRES_PRISMA_URL?.trim();
+const looksLikeSupabaseDirectUrl = Boolean(
+  postgresUrl &&
+    (postgresUrl.includes(":5432/") || /@db\.[a-z0-9]+\.supabase\.co(?::\d+)?\//i.test(postgresUrl)),
+);
+const pooledConnectionString = looksLikeSupabaseDirectUrl ? "" : (postgresUrl ?? "");
+const directConnectionString = nonPoolingUrl || prismaUrl || (looksLikeSupabaseDirectUrl ? (postgresUrl ?? "") : "");
 const hasPostgresConfig = Boolean(
-  process.env.POSTGRES_URL ||
-    process.env.POSTGRES_URL_NON_POOLING ||
-    process.env.POSTGRES_PRISMA_URL,
+  pooledConnectionString || directConnectionString,
 );
 
 let postgresReadyPromise: Promise<void> | null = null;
 
 const now = () => new Date().toISOString();
+
+async function runSql<T = unknown>(
+  strings: TemplateStringsArray,
+  ...values: unknown[]
+): Promise<{ rows: T[]; rowCount: number }> {
+  if (pooledConnectionString) {
+    const result = await sql<T>(strings, ...(values as []));
+    return {
+      rows: result.rows,
+      rowCount: result.rowCount ?? 0,
+    };
+  }
+
+  if (!directConnectionString) {
+    throw new Error("PostgreSQL接続文字列が未設定です。");
+  }
+
+  const client = createClient({ connectionString: directConnectionString });
+
+  await client.connect();
+  try {
+    const result = await client.sql<T>(strings, ...(values as []));
+    return {
+      rows: result.rows,
+      rowCount: result.rowCount ?? 0,
+    };
+  } finally {
+    await client.end();
+  }
+}
 
 const defaultNotificationSettings = (): GlobalNotificationSettings => ({
   emailEnabled: false,
@@ -213,7 +250,7 @@ async function ensurePostgresStore(): Promise<void> {
 
   if (!postgresReadyPromise) {
     postgresReadyPromise = (async () => {
-      await sql`
+      await runSql`
         CREATE TABLE IF NOT EXISTS inventory_state (
           id INTEGER PRIMARY KEY,
           data JSONB NOT NULL,
@@ -221,7 +258,7 @@ async function ensurePostgresStore(): Promise<void> {
         )
       `;
 
-      const existing = await sql<{ data: unknown }>`
+      const existing = await runSql<{ data: unknown }>`
         SELECT data
         FROM inventory_state
         WHERE id = ${inventoryStateId}
@@ -230,7 +267,7 @@ async function ensurePostgresStore(): Promise<void> {
 
       if (existing.rowCount === 0) {
         const seed = (await readLocalSeedData()) ?? defaultData();
-        await sql`
+        await runSql`
           INSERT INTO inventory_state (id, data, updated_at)
           VALUES (${inventoryStateId}, ${JSON.stringify(seed)}::jsonb, NOW())
         `;
@@ -247,7 +284,7 @@ async function ensurePostgresStore(): Promise<void> {
 async function readStore(): Promise<InventoryData> {
   if (hasPostgresConfig) {
     await ensurePostgresStore();
-    const result = await sql<{ data: unknown }>`
+    const result = await runSql<{ data: unknown }>`
       SELECT data
       FROM inventory_state
       WHERE id = ${inventoryStateId}
@@ -269,7 +306,7 @@ async function writeStore(data: InventoryData): Promise<void> {
 
   if (hasPostgresConfig) {
     await ensurePostgresStore();
-    await sql`
+    await runSql`
       INSERT INTO inventory_state (id, data, updated_at)
       VALUES (${inventoryStateId}, ${JSON.stringify(nextData)}::jsonb, NOW())
       ON CONFLICT (id)
