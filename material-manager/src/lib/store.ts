@@ -47,8 +47,7 @@ async function runSql<T = Record<string, unknown>>(
   await client.connect();
   try {
     // テンプレートリテラルのパーツからパラメータ化クエリを構築する。
-    // client.sql<T>() の generic 制約 (QueryResultRow) を完全に回避するため
-    // 基底クラス pg.Client の query() を直接呼ぶ。
+    // 型制約由来のビルドエラーを回避するため、query() を直接呼ぶ。
     const text = strings.reduce(
       (acc, part, i) => acc + part + (i < values.length ? `$${i + 1}` : ""),
       ""
