@@ -34,7 +34,7 @@ let postgresReadyPromise: Promise<void> | null = null;
 
 const now = () => new Date().toISOString();
 
-async function runSql<T = Record<string, unknown>>(
+async function runSql<T extends Record<string, unknown> = Record<string, unknown>>(
   strings: TemplateStringsArray,
   ...values: unknown[]
 ): Promise<{ rows: T[]; rowCount: number }> {
