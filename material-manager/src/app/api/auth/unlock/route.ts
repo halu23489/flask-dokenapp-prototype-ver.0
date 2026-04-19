@@ -6,8 +6,16 @@ function isValidPinFormat(value: string) {
   return /^\d{4}$/.test(value);
 }
 
+function normalizePin(value: unknown) {
+  const digitsOnly = String(value ?? "").replace(/\D/g, "");
+  if (digitsOnly.length < 3 || digitsOnly.length > 4) {
+    return "";
+  }
+  return digitsOnly.padStart(4, "0");
+}
+
 export async function POST(request: Request) {
-  const configuredPin = (process.env.APP_UNLOCK_PIN ?? "").trim();
+  const configuredPin = normalizePin((process.env.APP_UNLOCK_PIN ?? "").trim());
 
   if (!isValidPinFormat(configuredPin)) {
     return NextResponse.json(
@@ -20,7 +28,7 @@ export async function POST(request: Request) {
   }
 
   const body = (await request.json().catch(() => ({}))) as { pin?: unknown };
-  const inputPin = String(body.pin ?? "").trim();
+  const inputPin = normalizePin(body.pin);
 
   if (!isValidPinFormat(inputPin) || inputPin !== configuredPin) {
     return NextResponse.json({ error: "PINコードが正しくありません。" }, { status: 401 });
