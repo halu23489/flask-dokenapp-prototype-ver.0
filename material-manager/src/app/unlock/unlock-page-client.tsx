@@ -1,7 +1,7 @@
 "use client";
 
-import { Suspense, useMemo, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 function isValidPinFormat(value: string) {
   return /^\d{4}$/.test(value);
@@ -16,11 +16,6 @@ function normalizePinText(value: string) {
 
 function UnlockPageContent() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const nextPath = useMemo(() => {
-    const raw = searchParams.get("next") ?? "/";
-    return raw.startsWith("/") ? raw : "/";
-  }, [searchParams]);
 
   const [pin, setPin] = useState("");
   const [message, setMessage] = useState("4桁のPINコードを入力してください。");
@@ -52,6 +47,14 @@ function UnlockPageContent() {
         setMessage(result.error ?? "PINコードを確認してもう一度入力してください。");
         return;
       }
+
+      const nextPath = (() => {
+        if (typeof window === "undefined") {
+          return "/";
+        }
+        const raw = new URLSearchParams(window.location.search).get("next") ?? "/";
+        return raw.startsWith("/") ? raw : "/";
+      })();
 
       router.replace(nextPath);
       router.refresh();
@@ -95,9 +98,5 @@ function UnlockPageContent() {
 }
 
 export default function UnlockPageClient() {
-  return (
-    <Suspense fallback={<main className="inventory-shell" />}>
-      <UnlockPageContent />
-    </Suspense>
-  );
+  return <UnlockPageContent />;
 }
