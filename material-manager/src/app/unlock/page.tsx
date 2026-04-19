@@ -1,13 +1,13 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { Suspense, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 function isValidPinFormat(value: string) {
   return /^\d{4}$/.test(value);
 }
 
-export default function UnlockPage() {
+function UnlockPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const nextPath = useMemo(() => {
@@ -85,5 +85,13 @@ export default function UnlockPage() {
         </section>
       </div>
     </main>
+  );
+}
+
+export default function UnlockPage() {
+  return (
+    <Suspense fallback={<main className="inventory-shell" />}>
+      <UnlockPageContent />
+    </Suspense>
   );
 }
