@@ -37,12 +37,14 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "PINコードが正しくありません。" }, { status: 401 });
   }
 
+  const isSecureContext = request.url.startsWith("https://") || process.env.NODE_ENV === "production";
+
   const response = NextResponse.json({ ok: true });
   response.cookies.set({
     name: AUTH_COOKIE_NAME,
     value: "ok",
     httpOnly: true,
-    secure: true,
+    secure: isSecureContext,
     sameSite: "lax",
     path: "/",
     maxAge: 60 * 60 * 24 * 30,
