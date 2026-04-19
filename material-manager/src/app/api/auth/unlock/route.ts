@@ -7,7 +7,10 @@ function isValidPinFormat(value: string) {
 }
 
 function normalizePin(value: unknown) {
-  const digitsOnly = String(value ?? "").replace(/\D/g, "");
+  const halfWidth = String(value ?? "").replace(/[０-９]/g, (char) =>
+    String.fromCharCode(char.charCodeAt(0) - 0xfee0)
+  );
+  const digitsOnly = halfWidth.replace(/\D/g, "");
   if (digitsOnly.length < 3 || digitsOnly.length > 4) {
     return "";
   }

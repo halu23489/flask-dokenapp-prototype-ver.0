@@ -7,6 +7,13 @@ function isValidPinFormat(value: string) {
   return /^\d{4}$/.test(value);
 }
 
+function normalizePinText(value: string) {
+  const halfWidth = value.replace(/[０-９]/g, (char) =>
+    String.fromCharCode(char.charCodeAt(0) - 0xfee0)
+  );
+  return halfWidth.replace(/\D/g, "").slice(0, 4);
+}
+
 function UnlockPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -22,7 +29,7 @@ function UnlockPageContent() {
   async function handleSubmit(event: { preventDefault: () => void }) {
     event.preventDefault();
 
-    const normalized = pin.replace(/[^\d]/g, "").slice(0, 4);
+    const normalized = normalizePinText(pin);
 
     if (!isValidPinFormat(normalized)) {
       setMessage("PINコードは4桁の数字で入力してください。");
@@ -41,7 +48,8 @@ function UnlockPageContent() {
       const result = (await response.json().catch(() => ({}))) as { error?: string };
 
       if (!response.ok) {
-        setMessage(result.error ?? "認証に失敗しました。");
+        setPin("");
+        setMessage(result.error ?? "PINコードを確認してもう一度入力してください。");
         return;
       }
 
@@ -70,9 +78,7 @@ function UnlockPageContent() {
                 placeholder="4桁PIN"
                 className="form-control form-control-lg text-center"
                 value={pin}
-                onChange={(event) =>
-                  setPin((event.target as HTMLInputElement).value.replace(/[^\d]/g, "").slice(0, 4))
-                }
+                onChange={(event) => setPin(normalizePinText((event.target as HTMLInputElement).value))}
               />
 
               <button type="submit" className="btn btn-primary btn-lg" disabled={isPending}>
