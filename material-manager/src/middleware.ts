@@ -3,6 +3,11 @@ import type { NextRequest } from "next/server";
 
 const AUTH_COOKIE_NAME = "material_manager_auth";
 
+function isPinConfigured() {
+  const pin = (process.env.APP_UNLOCK_PIN ?? "").trim();
+  return /^\d{3,4}$/.test(pin);
+}
+
 function isPublicPath(pathname: string) {
   return (
     pathname === "/unlock" ||
@@ -14,6 +19,11 @@ function isPublicPath(pathname: string) {
 
 export function middleware(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
+
+  // PIN未設定の場合は認証をスキップ（テスト用）
+  if (!isPinConfigured()) {
+    return NextResponse.next();
+  }
 
   if (isPublicPath(pathname)) {
     return NextResponse.next();

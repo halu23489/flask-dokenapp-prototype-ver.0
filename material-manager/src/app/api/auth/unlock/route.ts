@@ -18,16 +18,23 @@ function normalizePin(value: unknown) {
 }
 
 export async function POST(request: Request) {
-  const configuredPin = normalizePin((process.env.APP_UNLOCK_PIN ?? "").trim());
+  const rawPin = (process.env.APP_UNLOCK_PIN ?? "").trim();
+  const configuredPin = normalizePin(rawPin);
 
-  if (!isValidPinFormat(configuredPin)) {
-    return NextResponse.json(
-      {
-        error:
-          "サーバー側のPIN設定が未設定です。環境変数 APP_UNLOCK_PIN に4桁の数字を設定してください。",
-      },
-      { status: 500 },
-    );
+  // PIN未設定の場合は自動的に認証OK（テスト用）
+  if (!rawPin || !isValidPinFormat(configuredPin)) {
+    const isSecureContext = request.url.startsWith("https://") || process.env.NODE_ENV === "production";
+    const response = NextResponse.json({ ok: true, message: "PIN未設定のためスキップしました" });
+    response.cookies.set({
+      name: AUTH_COOKIE_NAME,
+      value: "ok",
+      httpOnly: true,
+      secure: isSecureContext,
+      sameSite: "lax",
+      path: "/",
+      maxAge: 60 * 60 * 24 * 30,
+    });
+    return response;
   }
 
   const body = (await request.json().catch(() => ({}))) as { pin?: unknown };
