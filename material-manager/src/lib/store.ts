@@ -360,8 +360,13 @@ function appendLog(data: InventoryData, log: InventoryLog): InventoryData {
 }
 
 export async function getInventorySnapshot(): Promise<InventorySnapshot> {
-  const data = await readStore();
-  return toSnapshot(data);
+  try {
+    const data = await readStore();
+    return toSnapshot(data);
+  } catch (error) {
+    console.error("在庫データの読み込みに失敗したため初期データを返します", error);
+    return toSnapshot(defaultData());
+  }
 }
 
 export async function createMaterial(input: CreateMaterialInput): Promise<InventorySnapshot> {
