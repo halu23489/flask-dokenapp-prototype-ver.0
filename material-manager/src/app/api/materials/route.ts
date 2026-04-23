@@ -8,6 +8,7 @@ import {
   getInventorySnapshot,
   hasNotificationChannel,
   markAlertSent,
+  resolveForwardNotificationEmails,
   resolveNotificationEmails,
   shouldSendLowStockAlert,
   updateAlertSettings,
@@ -78,7 +79,14 @@ export async function POST(request: Request) {
 
       if (shouldSendLowStockAlert(result.material, settings)) {
         const recipients = resolveNotificationEmails(settings);
-        message = await sendLowStockAlert(result.material, result.snapshot, settings, recipients);
+        const forwardRecipients = resolveForwardNotificationEmails(settings);
+        message = await sendLowStockAlert(
+          result.material,
+          result.snapshot,
+          settings,
+          recipients,
+          forwardRecipients,
+        );
         await markAlertSent(result.material.id, result.material.quantity);
 
         const refreshedSnapshot = await getInventorySnapshot();
@@ -113,6 +121,9 @@ export async function POST(request: Request) {
         emailEnabled: Boolean(body.payload.emailEnabled),
         commonEmails: Array.isArray(body.payload.commonEmails)
           ? body.payload.commonEmails.map(String)
+          : [],
+        forwardEmails: Array.isArray(body.payload.forwardEmails)
+          ? body.payload.forwardEmails.map(String)
           : [],
         lineWorksEnabled: Boolean(body.payload.lineWorksEnabled),
         lineWorksWebhookUrl: String(body.payload.lineWorksWebhookUrl ?? ""),

@@ -376,6 +376,7 @@ export default function InventoryApp({ initialSnapshot }: Props) {
         payload: {
           emailEnabled: notificationDraft.emailEnabled,
           commonEmails: notificationDraft.commonEmails,
+          forwardEmails: notificationDraft.forwardEmails,
           lineWorksEnabled: notificationDraft.lineWorksEnabled,
           lineWorksWebhookUrl: notificationDraft.lineWorksWebhookUrl,
         },
@@ -668,6 +669,20 @@ export default function InventoryApp({ initialSnapshot }: Props) {
                         }))
                       }
                       placeholder="aaa@example.com, bbb@example.com"
+                      className="form-control"
+                    />
+                  </div>
+                  <div>
+                    <label className="form-label">転送先メール（BCC）</label>
+                    <input
+                      value={notificationDraft.forwardEmails.join(", ")}
+                      onChange={(event) =>
+                        setNotificationDraft((current) => ({
+                          ...current,
+                          forwardEmails: parseEmails(event.target.value),
+                        }))
+                      }
+                      placeholder="forward1@example.com, forward2@example.com"
                       className="form-control"
                     />
                   </div>

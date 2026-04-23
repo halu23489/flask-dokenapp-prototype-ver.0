@@ -72,6 +72,7 @@ async function runSql<T extends Record<string, unknown> = Record<string, unknown
 const defaultNotificationSettings = (): GlobalNotificationSettings => ({
   emailEnabled: false,
   commonEmails: [],
+  forwardEmails: [],
   lineWorksEnabled: false,
   lineWorksWebhookUrl: "",
 });
@@ -136,6 +137,7 @@ function sanitizeNotificationSettings(
   return {
     emailEnabled: raw?.emailEnabled ?? fallback.emailEnabled,
     commonEmails: sanitizeEmails(raw?.commonEmails ?? fallback.commonEmails),
+    forwardEmails: sanitizeEmails(raw?.forwardEmails ?? fallback.forwardEmails),
     lineWorksEnabled: raw?.lineWorksEnabled ?? fallback.lineWorksEnabled,
     lineWorksWebhookUrl: (raw?.lineWorksWebhookUrl ?? fallback.lineWorksWebhookUrl).trim(),
   };
@@ -539,8 +541,17 @@ export function resolveNotificationEmails(
   return sanitizeEmails(settings.commonEmails);
 }
 
+export function resolveForwardNotificationEmails(
+  settings: GlobalNotificationSettings,
+): string[] {
+  return sanitizeEmails(settings.forwardEmails);
+}
+
 export function hasNotificationChannel(settings: GlobalNotificationSettings): boolean {
-  const hasEmailChannel = settings.emailEnabled && resolveNotificationEmails(settings).length > 0;
+  const hasEmailChannel =
+    settings.emailEnabled &&
+    (resolveNotificationEmails(settings).length > 0 ||
+      resolveForwardNotificationEmails(settings).length > 0);
   const hasLineWorksChannel =
     settings.lineWorksEnabled &&
     (settings.lineWorksWebhookUrl.trim().length > 0 || Boolean(process.env.LINE_WORKS_WEBHOOK_URL));

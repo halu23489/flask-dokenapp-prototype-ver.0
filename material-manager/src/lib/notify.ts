@@ -35,6 +35,7 @@ async function sendEmailMessage(
   subject: string,
   text: string,
   recipients: string[],
+  forwardRecipients: string[],
   snapshot?: InventorySnapshot,
 ) {
   const transporter = getTransporter();
@@ -43,15 +44,20 @@ async function sendEmailMessage(
     return "メールはSMTP未設定のためスキップしました。";
   }
 
-  if (recipients.length === 0) {
-    return "メール送信先が未設定のためスキップしました。";
+  if (recipients.length === 0 && forwardRecipients.length === 0) {
+    return "メール送信先と転送先が未設定のためスキップしました。";
   }
+
+  const toRecipients = recipients.length > 0 ? recipients : forwardRecipients;
+  const bccRecipients =
+    recipients.length > 0 ? forwardRecipients.filter((mail) => !recipients.includes(mail)) : [];
 
   const from = process.env.MAIL_FROM ?? process.env.SMTP_USER;
 
   await transporter.sendMail({
     from,
-    to: recipients.join(","),
+    to: toRecipients.join(","),
+    bcc: bccRecipients.length > 0 ? bccRecipients.join(",") : undefined,
     subject,
     text,
     attachments: snapshot
@@ -66,7 +72,7 @@ async function sendEmailMessage(
       : [],
   });
 
-  return `メール送信: ${recipients.length}件`;
+  return `メール送信: ${toRecipients.length}件${bccRecipients.length > 0 ? ` / 転送: ${bccRecipients.length}件` : ""}`;
 }
 
 async function sendLineWorksMessage(text: string, settings: GlobalNotificationSettings) {
@@ -127,13 +133,14 @@ export async function sendLowStockAlert(
   snapshot: InventorySnapshot,
   settings: GlobalNotificationSettings,
   recipients: string[],
+  forwardRecipients: string[],
 ): Promise<string> {
   const subject = `在庫アラート: ${material.name}`;
   const text = buildLowStockMessage(material);
   const results: string[] = [];
 
   if (settings.emailEnabled) {
-    results.push(await sendEmailMessage(subject, text, recipients, snapshot));
+    results.push(await sendEmailMessage(subject, text, recipients, forwardRecipients, snapshot));
   }
 
   if (settings.lineWorksEnabled) {
@@ -152,7 +159,9 @@ export async function sendBroadcastNotification(
   const results: string[] = [];
 
   if (settings.emailEnabled) {
-    results.push(await sendEmailMessage(subject, text, settings.commonEmails, snapshot));
+    results.push(
+      await sendEmailMessage(subject, text, settings.commonEmails, settings.forwardEmails, snapshot),
+    );
   }
 
   if (settings.lineWorksEnabled) {

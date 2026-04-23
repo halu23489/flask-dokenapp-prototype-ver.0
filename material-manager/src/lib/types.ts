@@ -3,6 +3,7 @@ export type LogKind = "addition" | "usage";
 export type GlobalNotificationSettings = {
   emailEnabled: boolean;
   commonEmails: string[];
+  forwardEmails: string[];
   lineWorksEnabled: boolean;
   lineWorksWebhookUrl: string;
 };
@@ -75,6 +76,7 @@ export type UpdateAlertInput = {
 export type UpdateGlobalNotificationInput = {
   emailEnabled: boolean;
   commonEmails: string[];
+  forwardEmails: string[];
   lineWorksEnabled: boolean;
   lineWorksWebhookUrl: string;
 };
