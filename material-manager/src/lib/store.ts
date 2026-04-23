@@ -29,8 +29,11 @@ const directConnectionString = nonPoolingUrl || prismaUrl || postgresUrl || "";
 const hasPostgresConfig = Boolean(
   directConnectionString,
 );
+let postgresDisabledByError = false;
 
 let postgresReadyPromise: Promise<void> | null = null;
+
+const shouldUsePostgres = () => hasPostgresConfig && !postgresDisabledByError;
 
 const now = () => new Date().toISOString();
 
@@ -279,16 +282,21 @@ async function ensurePostgresStore(): Promise<void> {
 }
 
 async function readStore(): Promise<InventoryData> {
-  if (hasPostgresConfig) {
-    await ensurePostgresStore();
-    const result = await runSql<{ data: unknown }>`
-      SELECT data
-      FROM inventory_state
-      WHERE id = ${inventoryStateId}
-      LIMIT 1
-    `;
+  if (shouldUsePostgres()) {
+    try {
+      await ensurePostgresStore();
+      const result = await runSql<{ data: unknown }>`
+        SELECT data
+        FROM inventory_state
+        WHERE id = ${inventoryStateId}
+        LIMIT 1
+      `;
 
-    return normalizeInventoryData(parseStoredInventoryData(result.rows[0]?.data));
+      return normalizeInventoryData(parseStoredInventoryData(result.rows[0]?.data));
+    } catch (error) {
+      postgresDisabledByError = true;
+      console.error("PostgreSQL読み取りに失敗したためローカルストアへフォールバックします", error);
+    }
   }
 
   await ensureStore();
@@ -301,19 +309,25 @@ async function readStore(): Promise<InventoryData> {
 async function writeStore(data: InventoryData): Promise<void> {
   const nextData = { ...data, lastUpdatedAt: now() };
 
-  if (hasPostgresConfig) {
-    await ensurePostgresStore();
-    await runSql`
-      INSERT INTO inventory_state (id, data, updated_at)
-      VALUES (${inventoryStateId}, ${JSON.stringify(nextData)}::jsonb, NOW())
-      ON CONFLICT (id)
-      DO UPDATE SET
-        data = EXCLUDED.data,
-        updated_at = EXCLUDED.updated_at
-    `;
-    return;
+  if (shouldUsePostgres()) {
+    try {
+      await ensurePostgresStore();
+      await runSql`
+        INSERT INTO inventory_state (id, data, updated_at)
+        VALUES (${inventoryStateId}, ${JSON.stringify(nextData)}::jsonb, NOW())
+        ON CONFLICT (id)
+        DO UPDATE SET
+          data = EXCLUDED.data,
+          updated_at = EXCLUDED.updated_at
+      `;
+      return;
+    } catch (error) {
+      postgresDisabledByError = true;
+      console.error("PostgreSQL書き込みに失敗したためローカルストアへフォールバックします", error);
+    }
   }
 
+  await ensureStore();
   await fs.writeFile(
     localDataFilePath,
     JSON.stringify(nextData, null, 2),
