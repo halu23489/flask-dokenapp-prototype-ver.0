@@ -210,7 +210,7 @@ const defaultData = (): InventoryData => {
 };
 
 async function ensureStore(): Promise<void> {
-  if (hasPostgresConfig) {
+  if (shouldUsePostgres()) {
     return;
   }
 
