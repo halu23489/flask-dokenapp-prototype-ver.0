@@ -21,6 +21,7 @@ const bundledDataFilePath = path.join(process.cwd(), "data", "inventory.json");
 const localDataFilePath = process.env.VERCEL
   ? path.join("/tmp", "material-manager", "inventory.json")
   : bundledDataFilePath;
+const isVercelRuntime = Boolean(process.env.VERCEL);
 const inventoryStateId = 1;
 const postgresUrl = process.env.POSTGRES_URL?.trim();
 const nonPoolingUrl = process.env.POSTGRES_URL_NON_POOLING?.trim();
@@ -29,11 +30,16 @@ const directConnectionString = nonPoolingUrl || prismaUrl || postgresUrl || "";
 const hasPostgresConfig = Boolean(
   directConnectionString,
 );
-let postgresDisabledByError = false;
 
 let postgresReadyPromise: Promise<void> | null = null;
 
-const shouldUsePostgres = () => hasPostgresConfig && !postgresDisabledByError;
+function assertPersistentStoreAvailable() {
+  if (isVercelRuntime && !hasPostgresConfig) {
+    throw new Error(
+      "本番環境でPostgreSQL接続が未設定です。POSTGRES_URL / POSTGRES_URL_NON_POOLING / POSTGRES_PRISMA_URL を確認してください。",
+    );
+  }
+}
 
 const now = () => new Date().toISOString();
 
@@ -212,7 +218,9 @@ const defaultData = (): InventoryData => {
 };
 
 async function ensureStore(): Promise<void> {
-  if (shouldUsePostgres()) {
+  assertPersistentStoreAvailable();
+
+  if (hasPostgresConfig) {
     return;
   }
 
@@ -268,7 +276,7 @@ async function ensurePostgresStore(): Promise<void> {
       `;
 
       if (existing.rowCount === 0) {
-        const seed = (await readLocalSeedData()) ?? defaultData();
+        const seed = defaultData();
         await runSql`
           INSERT INTO inventory_state (id, data, updated_at)
           VALUES (${inventoryStateId}, ${JSON.stringify(seed)}::jsonb, NOW())
@@ -284,7 +292,7 @@ async function ensurePostgresStore(): Promise<void> {
 }
 
 async function readStore(): Promise<InventoryData> {
-  if (shouldUsePostgres()) {
+  if (hasPostgresConfig) {
     try {
       await ensurePostgresStore();
       const result = await runSql<{ data: unknown }>`
@@ -296,7 +304,9 @@ async function readStore(): Promise<InventoryData> {
 
       return normalizeInventoryData(parseStoredInventoryData(result.rows[0]?.data));
     } catch (error) {
-      postgresDisabledByError = true;
+      if (isVercelRuntime) {
+        throw new Error("PostgreSQL読み取りに失敗しました。接続情報またはDB権限を確認してください。");
+      }
       console.error("PostgreSQL読み取りに失敗したためローカルストアへフォールバックします", error);
     }
   }
@@ -311,7 +321,7 @@ async function readStore(): Promise<InventoryData> {
 async function writeStore(data: InventoryData): Promise<void> {
   const nextData = { ...data, lastUpdatedAt: now() };
 
-  if (shouldUsePostgres()) {
+  if (hasPostgresConfig) {
     try {
       await ensurePostgresStore();
       await runSql`
@@ -324,7 +334,9 @@ async function writeStore(data: InventoryData): Promise<void> {
       `;
       return;
     } catch (error) {
-      postgresDisabledByError = true;
+      if (isVercelRuntime) {
+        throw new Error("PostgreSQL書き込みに失敗しました。接続情報またはDB権限を確認してください。");
+      }
       console.error("PostgreSQL書き込みに失敗したためローカルストアへフォールバックします", error);
     }
   }
@@ -366,6 +378,9 @@ export async function getInventorySnapshot(): Promise<InventorySnapshot> {
     const data = await readStore();
     return toSnapshot(data);
   } catch (error) {
+    if (isVercelRuntime) {
+      throw error;
+    }
     console.error("在庫データの読み込みに失敗したため初期データを返します", error);
     return toSnapshot(defaultData());
   }
