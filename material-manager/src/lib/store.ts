@@ -27,6 +27,13 @@ const postgresUrl = process.env.POSTGRES_URL?.trim();
 const nonPoolingUrl = process.env.POSTGRES_URL_NON_POOLING?.trim();
 const prismaUrl = process.env.POSTGRES_PRISMA_URL?.trim();
 const directConnectionString = nonPoolingUrl || prismaUrl || postgresUrl || "";
+const activeConnectionVar = nonPoolingUrl
+  ? "POSTGRES_URL_NON_POOLING"
+  : prismaUrl
+    ? "POSTGRES_PRISMA_URL"
+    : postgresUrl
+      ? "POSTGRES_URL"
+      : "未設定";
 const hasPostgresConfig = Boolean(
   directConnectionString,
 );
@@ -39,6 +46,22 @@ function assertPersistentStoreAvailable() {
       "本番環境でPostgreSQL接続が未設定です。POSTGRES_URL / POSTGRES_URL_NON_POOLING / POSTGRES_PRISMA_URL を確認してください。",
     );
   }
+}
+
+function resolveConnectionTarget(connectionString: string): string {
+  try {
+    const url = new URL(connectionString);
+    const port = url.port || "5432";
+    return `${url.hostname}:${port}${url.pathname}`;
+  } catch {
+    return "接続文字列を解析できません";
+  }
+}
+
+function buildPostgresErrorMessage(action: "読み取り" | "書き込み", error: unknown): string {
+  const detail = error instanceof Error ? error.message : String(error);
+  const target = resolveConnectionTarget(directConnectionString);
+  return `PostgreSQL${action}に失敗しました。使用変数: ${activeConnectionVar} / 接続先: ${target} / 詳細: ${detail}`;
 }
 
 const now = () => new Date().toISOString();
@@ -305,7 +328,7 @@ async function readStore(): Promise<InventoryData> {
       return normalizeInventoryData(parseStoredInventoryData(result.rows[0]?.data));
     } catch (error) {
       if (isVercelRuntime) {
-        throw new Error("PostgreSQL読み取りに失敗しました。接続情報またはDB権限を確認してください。");
+        throw new Error(buildPostgresErrorMessage("読み取り", error));
       }
       console.error("PostgreSQL読み取りに失敗したためローカルストアへフォールバックします", error);
     }
@@ -335,7 +358,7 @@ async function writeStore(data: InventoryData): Promise<void> {
       return;
     } catch (error) {
       if (isVercelRuntime) {
-        throw new Error("PostgreSQL書き込みに失敗しました。接続情報またはDB権限を確認してください。");
+        throw new Error(buildPostgresErrorMessage("書き込み", error));
       }
       console.error("PostgreSQL書き込みに失敗したためローカルストアへフォールバックします", error);
     }
