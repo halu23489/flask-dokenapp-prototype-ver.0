@@ -23,19 +23,11 @@ const localDataFilePath = process.env.VERCEL
   : bundledDataFilePath;
 const isVercelRuntime = Boolean(process.env.VERCEL);
 const inventoryStateId = 1;
-const postgresUrl = process.env.POSTGRES_URL?.trim();
-const nonPoolingUrl = process.env.POSTGRES_URL_NON_POOLING?.trim();
-const prismaUrl = process.env.POSTGRES_PRISMA_URL?.trim();
-const directConnectionString = nonPoolingUrl || prismaUrl || postgresUrl || "";
-const activeConnectionVar = nonPoolingUrl
-  ? "POSTGRES_URL_NON_POOLING"
-  : prismaUrl
-    ? "POSTGRES_PRISMA_URL"
-    : postgresUrl
-      ? "POSTGRES_URL"
-      : "未設定";
+const postgresUrl = process.env.POSTGRES_URL?.trim() || "";
+const directConnectionString = postgresUrl;
+const activeConnectionVar = "POSTGRES_URL";
 const hasPostgresConfig = Boolean(
-  directConnectionString,
+  postgresUrl,
 );
 
 let postgresReadyPromise: Promise<void> | null = null;
@@ -43,7 +35,7 @@ let postgresReadyPromise: Promise<void> | null = null;
 function assertPersistentStoreAvailable() {
   if (isVercelRuntime && !hasPostgresConfig) {
     throw new Error(
-      "本番環境でPostgreSQL接続が未設定です。POSTGRES_URL / POSTGRES_URL_NON_POOLING / POSTGRES_PRISMA_URL を確認してください。",
+      "本番環境でPostgreSQL接続が未設定です。POSTGRES_URL を確認してください。",
     );
   }
 }
