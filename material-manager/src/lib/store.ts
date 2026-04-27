@@ -3,7 +3,7 @@ import "server-only";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 
-import { createClient } from "@vercel/postgres";
+import { createPool } from "@vercel/postgres";
 
 import type {
   AdjustMaterialInput,
@@ -29,6 +29,9 @@ const activeConnectionVar = "POSTGRES_URL";
 const hasPostgresConfig = Boolean(
   postgresUrl,
 );
+const postgresPool = hasPostgresConfig
+  ? createPool({ connectionString: directConnectionString })
+  : null;
 
 let postgresReadyPromise: Promise<void> | null = null;
 
@@ -62,32 +65,25 @@ async function runSql<T extends Record<string, unknown> = Record<string, unknown
   strings: TemplateStringsArray,
   ...values: unknown[]
 ): Promise<{ rows: T[]; rowCount: number }> {
-  if (!directConnectionString) {
+  if (!postgresPool) {
     throw new Error("PostgreSQL接続文字列が未設定です。");
   }
 
-  const client = createClient({ connectionString: directConnectionString });
-
-  await client.connect();
-  try {
-    // テンプレートリテラルのパーツからパラメータ化クエリを構築する。
-    // 型制約由来のビルドエラーを回避するため、query() を直接呼ぶ。
-    const text = strings.reduce(
-      (acc, part, i) => acc + part + (i < values.length ? `$${i + 1}` : ""),
-      ""
-    );
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const result = await (client as any).query(text, values) as {
-      rows: unknown[];
-      rowCount: number | null;
-    };
-    return {
-      rows: (result.rows ?? []) as T[],
-      rowCount: result.rowCount ?? 0,
-    };
-  } finally {
-    await client.end();
-  }
+  // テンプレートリテラルのパーツからパラメータ化クエリを構築する。
+  // 型制約由来のビルドエラーを回避するため、query() を直接呼ぶ。
+  const text = strings.reduce(
+    (acc, part, i) => acc + part + (i < values.length ? `$${i + 1}` : ""),
+    ""
+  );
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const result = await (postgresPool as any).query(text, values) as {
+    rows: unknown[];
+    rowCount: number | null;
+  };
+  return {
+    rows: (result.rows ?? []) as T[],
+    rowCount: result.rowCount ?? 0,
+  };
 }
 
 const defaultNotificationSettings = (): GlobalNotificationSettings => ({
