@@ -18,6 +18,10 @@ const monoFont = IBM_Plex_Mono({
 export const metadata: Metadata = {
   title: "松戸置き場用資材管理表",
   description: "資材の現在庫、入出庫ログ、Excel出力、共有、通知設定をまとめて管理するアプリ",
+  icons: {
+    icon: "/logo.png",
+    apple: "/logo.png",
+  },
 };
 
 export default function RootLayout({
