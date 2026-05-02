@@ -463,15 +463,25 @@ export default function InventoryApp({ initialSnapshot }: Props) {
 
   return (
     <main className="inventory-shell">
+      {/* サイトヘッダー */}
+      <nav className="navbar navbar-dark mb-0" style={{ background: "linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
+        <div className="container-xl">
+          <a className="navbar-brand d-flex align-items-center gap-2 py-2" href="#">
+            <img src="/logo.png" alt="MTD" width={40} height={40} style={{ borderRadius: "8px", objectFit: "contain" }} />
+            <span className="fw-bold fs-5" style={{ letterSpacing: "0.03em" }}>MTD 資材管理</span>
+          </a>
+        </div>
+      </nav>
+
       <div className="container-xl">
         <div className="inventory-hero rounded-4 p-4 p-lg-5 mb-4">
           <div className="row g-4 align-items-end">
             <div className="col-lg-8">
-              <div className="d-flex align-items-center gap-3 mb-3">
-                <img src="/logo.png" alt="MTD" width={64} height={64} style={{ borderRadius: "12px", objectFit: "contain" }} />
-                <span className="badge text-bg-primary">全員編集可</span>
+              <span className="badge text-bg-primary mb-3">全員編集可</span>
+              <div className="d-flex align-items-center gap-3 mb-2">
+                <img src="/logo.png" alt="MTD" width={52} height={52} style={{ borderRadius: "10px", objectFit: "contain" }} />
+                <h1 className="display-6 fw-bold mb-0">松戸置き場用資材管理表</h1>
               </div>
-              <h1 className="display-6 fw-bold mb-2">松戸置き場用資材管理表</h1>
               <p className="inventory-subtle mb-2">
                 資材の現在庫、入庫・使用、ログ出力、共有、全員向け通知をシンプルにまとめています。
               </p>
